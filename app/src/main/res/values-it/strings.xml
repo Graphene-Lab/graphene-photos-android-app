@@ -142,6 +142,9 @@
     <string name="profile_delete_photos_dialog_body">Questo eliminerà definitivamente tutte le foto sincronizzate dalla galleria del tuo dispositivo. Le foto saranno ancora disponibili nel cloud. Questa azione non può essere annullata.</string>
     <string name="profile_delete_button">Elimina</string>
     <string name="profile_cancel_button">Annulla</string>
+    <string name="profile_choose_folders_title">Scegli cartelle da sincronizzare</string>
+    <string name="profile_choose_folders_subtitle">Seleziona quali cartelle del dispositivo sincronizzare nel cloud.</string>
+    <string name="profile_choose_folders_button">Scegli cartelle</string>
     <string name="profile_danger_zone_title">Zona pericolosa</string>
     <string name="profile_danger_zone_subtitle">L\'eliminazione del tuo account è definitiva e non può essere annullata.</string>
     <string name="profile_deleting_account">Eliminazione account…</string>
@@ -156,4 +159,12 @@
     <string name="common_ok">OK</string>
     <string name="common_error_prefix">Errore: %1$s</string>
     <string name="common_delete_cd">Elimina</string>
+
+    <!-- Folders Screen -->
+    <string name="folders_title">Scegli cartelle</string>
+    <string name="folders_back_cd">Indietro</string>
+    <string name="folders_loading">Caricamento cartelle…</string>
+    <string name="folders_no_folders">Nessuna cartella di foto trovata</string>
+    <string name="folders_item_photos_count">%1$d foto</string>
+    <string name="folders_manage_permissions">Non vedi la tua cartella? Tocca qui per gestire i permessi</string>
 </resources>

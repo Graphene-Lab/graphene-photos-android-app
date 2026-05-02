@@ -142,6 +142,9 @@
     <string name="profile_delete_photos_dialog_body">Cela supprimera définitivement toutes les photos synchronisées de la galerie de votre appareil. Les photos resteront disponibles dans le cloud. Cette action ne peut pas être annulée.</string>
     <string name="profile_delete_button">Supprimer</string>
     <string name="profile_cancel_button">Annuler</string>
+    <string name="profile_choose_folders_title">Choisir les dossiers à synchroniser</string>
+    <string name="profile_choose_folders_subtitle">Sélectionnez les dossiers de l\'appareil à sauvegarder dans le cloud.</string>
+    <string name="profile_choose_folders_button">Choisir les dossiers</string>
     <string name="profile_danger_zone_title">Zone dangereuse</string>
     <string name="profile_danger_zone_subtitle">La suppression de votre compte est définitive et ne peut pas être annulée.</string>
     <string name="profile_deleting_account">Suppression du compte…</string>
@@ -156,4 +159,12 @@
     <string name="common_ok">OK</string>
     <string name="common_error_prefix">Erreur : %1$s</string>
     <string name="common_delete_cd">Supprimer</string>
+
+    <!-- Folders Screen -->
+    <string name="folders_title">Choisir les dossiers</string>
+    <string name="folders_back_cd">Retour</string>
+    <string name="folders_loading">Chargement des dossiers…</string>
+    <string name="folders_no_folders">Aucun dossier de photos trouvé</string>
+    <string name="folders_item_photos_count">%1$d photos</string>
+    <string name="folders_manage_permissions">Vous ne trouvez pas votre dossier ? Appuyez ici pour gérer les autorisations</string>
 </resources>

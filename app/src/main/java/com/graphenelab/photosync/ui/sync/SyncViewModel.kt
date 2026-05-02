@@ -22,7 +22,13 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import javax.inject.Inject
+
+sealed class SyncEvent {
+    object NavigateToScanSetup : SyncEvent()
+}
 
 @HiltViewModel
 class SyncViewModel @Inject constructor(
@@ -33,6 +39,10 @@ class SyncViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SyncUiState())
     val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
+
+    private val _events = Channel<SyncEvent>()
+    val events = _events.receiveAsFlow()
+
     private var screenStarted = false
 
     init {
@@ -193,16 +203,17 @@ class SyncViewModel @Inject constructor(
             }"
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (permissions.getOrDefault(
-                    Manifest.permission.POST_NOTIFICATIONS, false
-                ) || permissions.getOrDefault(
-                    Manifest.permission.READ_MEDIA_IMAGES, false
-                ) || permissions.getOrDefault(
-                    Manifest.permission.READ_MEDIA_VIDEO, false
-                )
+
+            val hasMediaPermission = permissions.getOrDefault(Manifest.permission.READ_MEDIA_IMAGES, false)
+                    || permissions.getOrDefault(Manifest.permission.READ_MEDIA_VIDEO, false)
+                    || permissions.getOrDefault(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED, false)
+
+            if (hasMediaPermission
             ) {
                 if (_uiState.value.startFullScanButtonClicked) {
-                    startFullScan()
+                    viewModelScope.launch {
+                        _events.send(SyncEvent.NavigateToScanSetup)
+                    }
                 } else if (_uiState.value.syncFromNowButtonClicked) {
                     onFromNowSyncToggled(true)
                 }
@@ -224,11 +235,11 @@ class SyncViewModel @Inject constructor(
                 Log.d("SyncViewModel", "Permission granted")
                 if (_uiState.value.startFullScanButtonClicked) {
                     Log.d("SyncViewModel", "Permission 1")
-
-                    startFullScan()
+                    viewModelScope.launch {
+                        _events.send(SyncEvent.NavigateToScanSetup)
+                    }
                 } else if (_uiState.value.syncFromNowButtonClicked) {
                     Log.d("SyncViewModel", "Permission 2")
-
                     onFromNowSyncToggled(true)
                 }
             } else {

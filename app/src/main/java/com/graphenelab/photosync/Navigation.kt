@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.graphenelab.photosync.ui.auth.AuthScreen
 import com.graphenelab.photosync.ui.auth.AuthZeroKnowledgeScreen
 import com.graphenelab.photosync.ui.login.LoginRoute
@@ -15,6 +17,7 @@ import com.graphenelab.photosync.ui.mnemonic.MnemonicScreen
 //import com.graphenelab.photosync.ui.subscription.SubscriptionScreen
 import com.graphenelab.photosync.ui.sync.SyncScreen
 import com.graphenelab.photosync.ui.scan.ScanScreen
+import com.graphenelab.photosync.ui.folders.FoldersScreen
 
 
 @Composable
@@ -95,6 +98,9 @@ fun AppNavigation(
                 },
                 onNavigateToProfile = {
                     navController.navigate("profile")
+                },
+                onNavigateToScanSetup = {
+                    navController.navigate("folders?isFromScanSetup=true")
                 }
             )
         }
@@ -175,6 +181,22 @@ fun AppNavigation(
                 },
                 onNavigateToSubscription = {
                     navController.navigate("subscription")
+                },
+                onNavigateToFolders = {
+                    navController.navigate("folders")
+                }
+            )
+        }
+
+        composable(
+            "folders?isFromScanSetup={isFromScanSetup}",
+            arguments = listOf(navArgument("isFromScanSetup") { defaultValue = false; type = NavType.BoolType })
+        ) { backStackEntry ->
+            val isFromScanSetup = backStackEntry.arguments?.getBoolean("isFromScanSetup") ?: false
+            FoldersScreen(
+                isFromScanSetup = isFromScanSetup,
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

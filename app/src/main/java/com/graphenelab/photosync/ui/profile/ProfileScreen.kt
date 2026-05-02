@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -42,6 +43,7 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToSubscription: () -> Unit,
+    onNavigateToFolders: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -430,6 +432,41 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.profile_choose_folders_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.profile_choose_folders_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = onNavigateToFolders
+                    ) {
+                        Icon(
+                            Icons.Default.Folder,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.profile_choose_folders_button))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             DangerZoneSection(
                 isDeletingAccount = uiState.isDeletingAccount,
                 deleteAccountError = uiState.deleteAccountError,
@@ -561,5 +598,5 @@ internal fun DangerZoneSection(
 @Preview
 @Composable
 fun ProfileScreenPreview() {
-    ProfileScreen({}, {}, {})
+    ProfileScreen({}, {}, {}, {})
 }

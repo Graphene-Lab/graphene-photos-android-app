@@ -49,7 +49,7 @@ class FullScanProcessManager @Inject constructor(
     private val concurrentLimit = Semaphore(2) // Allow max N concurrent operations
 
     override suspend fun initializeIntervals(): MutableList<TimeInterval> {
-        if (BuildConfig.DEBUG) syncIntervalRepository.clearAllData()// TODO: Note - clears synced photos.
+        if (BuildConfig.DEBUG) syncIntervalRepository.clearSyncData()// TODO: Note - clears synced photos.
         val allIntervals = syncIntervalRepository.syncedIntervals.first().toMutableList()
         // Ensure the initial 0-timestamp interval exists for complete coverage.
         if (allIntervals.none { it.start == 0L }) {

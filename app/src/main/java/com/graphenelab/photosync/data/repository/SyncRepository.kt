@@ -28,7 +28,18 @@ class SyncRepositoryImpl @Inject constructor(
         prefs.deleteSyncFromNowPoint()
     }
 
+    override val selectedFolders = prefs.selectedFolders
+    override val hasInitializedFolders = prefs.hasInitializedFolders
+
+    override suspend fun saveSelectedFolders(folders: Set<String>) {
+        prefs.saveSelectedFolders(folders)
+    }
+
     override suspend fun clearAllData() {
         prefs.clearAllData()
+    }
+
+    override suspend fun clearSyncData() {
+        prefs.clearSyncData()
     }
 }

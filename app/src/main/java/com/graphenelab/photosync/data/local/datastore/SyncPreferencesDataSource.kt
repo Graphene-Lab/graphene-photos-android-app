@@ -22,6 +22,7 @@ class SyncPreferencesDataSource @Inject constructor(
     companion object {
         private val SYNC_INTERVALS_KEY = stringPreferencesKey("sync_intervals")
         private val SYNC_FROM_NOW_POINT_KEY = longPreferencesKey("sync_from_now_point")
+        private val SYNC_SELECTED_FOLDERS_KEY = stringSetPreferencesKey("sync_selected_folders")
     }
 
     val syncedIntervals: Flow<List<TimeInterval>> =
@@ -46,7 +47,24 @@ class SyncPreferencesDataSource @Inject constructor(
         context.dataStore.edit { it.remove(SYNC_FROM_NOW_POINT_KEY) }
     }
 
+    val selectedFolders: Flow<Set<String>> =
+        context.dataStore.data.map { it[SYNC_SELECTED_FOLDERS_KEY] ?: emptySet() }
+
+    val hasInitializedFolders: Flow<Boolean> =
+        context.dataStore.data.map { it.contains(SYNC_SELECTED_FOLDERS_KEY) }
+
+    suspend fun saveSelectedFolders(folders: Set<String>) {
+        context.dataStore.edit { it[SYNC_SELECTED_FOLDERS_KEY] = folders }
+    }
+
     suspend fun clearAllData() {
         context.dataStore.edit { it.clear() }
+    }
+
+    suspend fun clearSyncData() {
+        context.dataStore.edit { 
+            it.remove(SYNC_INTERVALS_KEY)
+            it.remove(SYNC_FROM_NOW_POINT_KEY)
+        }
     }
 }

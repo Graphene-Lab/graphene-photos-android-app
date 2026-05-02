@@ -26,7 +26,8 @@ import com.graphenelab.photosync.R
 fun SyncScreen(
     syncViewModel: SyncViewModel = hiltViewModel(),
     onScreenDisplayed: (() -> Unit)? = null,
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    onNavigateToScanSetup: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -48,6 +49,15 @@ fun SyncScreen(
         syncViewModel.onScreenStarted()
         syncViewModel.setPermissionLauncher(permissionLauncher)
     }
+
+    LaunchedEffect(syncViewModel) {
+        syncViewModel.events.collect { event ->
+            when (event) {
+                is SyncEvent.NavigateToScanSetup -> onNavigateToScanSetup()
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

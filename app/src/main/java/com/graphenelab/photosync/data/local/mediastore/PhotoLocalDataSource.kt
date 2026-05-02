@@ -6,12 +6,17 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import com.graphenelab.photosync.BuildConfig
+import com.graphenelab.photosync.data.local.datastore.SyncPreferencesDataSource
 import com.graphenelab.photosync.domain.model.GalleryPhoto
+import com.graphenelab.photosync.domain.model.ImageFolder
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 class PhotoLocalDataSource @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val prefs: SyncPreferencesDataSource
 ) {
 
     fun getPhotos(startTimeSeconds: Long): List<GalleryPhoto> {
@@ -49,11 +54,15 @@ class PhotoLocalDataSource @Inject constructor(
             selectionArgsList.add(it.toString())
         }
 
-        selectionParts.add("${MediaStore.Images.Media.DATA} LIKE ?")
-        val cameraFolder = if (BuildConfig.DEBUG) DEBUG_CAMERA_FOLDER else RELEASE_CAMERA_FOLDER
-        val dcimCameraPath =
-            "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).absolutePath}/$cameraFolder"
-        selectionArgsList.add("$dcimCameraPath%")
+        var selectedFolders = runBlocking { prefs.selectedFolders.first() }
+
+        if (selectedFolders.isNotEmpty()) {
+            val placeholders = selectedFolders.joinToString(", ") { "?" }
+            selectionParts.add("${MediaStore.Images.Media.BUCKET_ID} IN ($placeholders)")
+            selectionArgsList.addAll(selectedFolders)
+        } else {
+            return emptyList()
+        }
 
         val selection = selectionParts.joinToString(" AND ")
         val selectionArgs = selectionArgsList.toTypedArray()
@@ -118,9 +127,50 @@ class PhotoLocalDataSource @Inject constructor(
         return photoUris
     }
 
-    companion object {
-        private const val DEBUG_CAMERA_FOLDER = "Camera"
-        private const val RELEASE_CAMERA_FOLDER = "Camera"
+    fun getAvailableFolders(): List<ImageFolder> {
+        val folders = mutableListOf<ImageFolder>()
+        val projection = arrayOf(
+            MediaStore.Images.Media.BUCKET_ID,
+            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+            MediaStore.Images.Media._ID
+        )
+
+        context.contentResolver.query(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            null,
+            null,
+            "${MediaStore.Images.Media.DATE_ADDED} DESC"
+        )?.use { cursor ->
+            val bucketIdCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
+            val bucketNameCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+
+            val folderMap = mutableMapOf<String, ImageFolder>()
+
+            while (cursor.moveToNext()) {
+                val bucketId = cursor.getString(bucketIdCol) ?: continue
+                val bucketName = cursor.getString(bucketNameCol) ?: "Unknown"
+                
+                if (folderMap.containsKey(bucketId)) {
+                    val existing = folderMap[bucketId]!!
+                    folderMap[bucketId] = existing.copy(photoCount = existing.photoCount + 1)
+                } else {
+                    val id = cursor.getLong(idCol)
+                    val contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                    folderMap[bucketId] = ImageFolder(
+                        bucketId = bucketId,
+                        displayName = bucketName,
+                        photoCount = 1,
+                        coverUri = contentUri
+                    )
+                }
+            }
+            folders.addAll(folderMap.values)
+        }
+        return folders
     }
 
+    companion object {
+    }
 }

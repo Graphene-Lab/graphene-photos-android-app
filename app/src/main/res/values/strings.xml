@@ -142,6 +142,9 @@
     <string name="profile_delete_photos_dialog_body">This will permanently delete all synced photos from your device gallery. The photos will still be available in the cloud. This action cannot be undone.</string>
     <string name="profile_delete_button">Delete</string>
     <string name="profile_cancel_button">Cancel</string>
+    <string name="profile_choose_folders_title">Choose Folders to Sync</string>
+    <string name="profile_choose_folders_subtitle">Select which device folders should be backed up to the cloud.</string>
+    <string name="profile_choose_folders_button">Choose Folders</string>
     <string name="profile_danger_zone_title">Danger Zone</string>
     <string name="profile_danger_zone_subtitle">Deleting your account is permanent and cannot be undone.</string>
     <string name="profile_deleting_account">Deleting Account…</string>
@@ -156,4 +159,12 @@
     <string name="common_ok">OK</string>
     <string name="common_error_prefix">Error: %1$s</string>
     <string name="common_delete_cd">Delete</string>
+
+    <!-- Folders Screen -->
+    <string name="folders_title">Choose Folders</string>
+    <string name="folders_back_cd">Back</string>
+    <string name="folders_loading">Loading folders…</string>
+    <string name="folders_no_folders">No photo folders found</string>
+    <string name="folders_item_photos_count">%1$d photos</string>
+    <string name="folders_manage_permissions">Don\'t see your folder? Tap here to manage photo permissions</string>
 </resources>

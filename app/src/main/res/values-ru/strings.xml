@@ -142,6 +142,9 @@
     <string name="profile_delete_photos_dialog_body">Это безвозвратно удалит все синхронизированные фото из галереи устройства. Фото по-прежнему будут доступны в облаке. Действие нельзя отменить.</string>
     <string name="profile_delete_button">Удалить</string>
     <string name="profile_cancel_button">Отмена</string>
+    <string name="profile_choose_folders_title">Выбрать папки для синхронизации</string>
+    <string name="profile_choose_folders_subtitle">Выберите, какие папки на устройстве должны резервироваться в облаке.</string>
+    <string name="profile_choose_folders_button">Выбрать папки</string>
     <string name="profile_danger_zone_title">Опасная зона</string>
     <string name="profile_danger_zone_subtitle">Удаление аккаунта необратимо и не может быть отменено.</string>
     <string name="profile_deleting_account">Удаление аккаунта…</string>
@@ -156,4 +159,12 @@
     <string name="common_ok">ОК</string>
     <string name="common_error_prefix">Ошибка: %1$s</string>
     <string name="common_delete_cd">Удалить</string>
+
+    <!-- Folders Screen -->
+    <string name="folders_title">Выбрать папки</string>
+    <string name="folders_back_cd">Назад</string>
+    <string name="folders_loading">Загрузка папок…</string>
+    <string name="folders_no_folders">Папки с фото не найдены</string>
+    <string name="folders_item_photos_count">%1$d фото</string>
+    <string name="folders_manage_permissions">Не видите свою папку? Нажмите здесь для управления разрешениями</string>
 </resources>

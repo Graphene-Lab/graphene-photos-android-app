@@ -31,5 +31,12 @@ interface ISyncRepository {
      * Deletes the saved "sync from now" timestamp.
      */
     suspend fun deleteSyncFromNowPoint()
+    
+    val selectedFolders: Flow<Set<String>>
+    val hasInitializedFolders: Flow<Boolean>
+    suspend fun saveSelectedFolders(folders: Set<String>)
+
     suspend fun clearAllData()
+
+    suspend fun clearSyncData()
 }
