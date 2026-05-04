@@ -157,29 +157,28 @@ fun SyncScreen(
                 }
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
+                ListItem(
+                    headlineContent = {
                         Text(
                             stringResource(R.string.sync_auto_label),
                             style = MaterialTheme.typography.titleMedium
                         )
+                    },
+                    supportingContent = {
                         Text(
                             stringResource(R.string.sync_auto_subtitle),
                             style = MaterialTheme.typography.bodySmall
                         )
-                    }
-                    Switch(
-                        checked = uiState.isBackgroundSyncScheduled,
-                        onCheckedChange = syncViewModel::onFromNowSyncToggled,
-                        enabled = !uiState.isFullScanInProgress
-                    )
-                }
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = uiState.isBackgroundSyncScheduled,
+                            onCheckedChange = syncViewModel::onFromNowSyncToggled,
+                            enabled = !uiState.isFullScanInProgress
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
