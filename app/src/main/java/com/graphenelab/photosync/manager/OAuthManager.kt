@@ -35,7 +35,9 @@ class OAuthManager @Inject constructor(
             "cloud-mobile-app",
             ResponseTypeValues.CODE,
             "com.graphenelab.photosync://redirect".toUri()
-        ).setScope("openid profile").build()
+        ).setScope("openid profile")
+            .setPrompt("login")
+            .build()
 
         return authService.getAuthorizationRequestIntent(authRequest)
     }
