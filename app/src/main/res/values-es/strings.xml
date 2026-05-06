@@ -17,7 +17,7 @@
 
     <!-- Sync Screen -->
     <string name="sync_title">Sincronización de galería</string>
-    <string name="sync_profile_cd">Perfil</string>
+    <string name="sync_settings_cd">Configuración</string>
     <string name="sync_status_label">Estado:</string>
     <string name="sync_success">Sincronización exitosa, %1$d fotos subidas</string>
     <string name="sync_no_photos">No hay fotos que sincronizar. Todo está actualizado.</string>

@@ -17,7 +17,7 @@
 
     <!-- Sync Screen -->
     <string name="sync_title">Gallery Sync</string>
-    <string name="sync_profile_cd">Profile</string>
+    <string name="sync_settings_cd">Settings</string>
     <string name="sync_status_label">Status:</string>
     <string name="sync_success">Sync Successful, %1$d photos uploaded</string>
     <string name="sync_no_photos">No photos to sync. Everything is up to date.</string>

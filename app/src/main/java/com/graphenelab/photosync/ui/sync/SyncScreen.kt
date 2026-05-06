@@ -10,7 +10,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -77,7 +77,7 @@ fun SyncScreen(
                 title = { Text(stringResource(R.string.sync_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateToProfile) {
-                        Icon(Icons.Default.Person, contentDescription = stringResource(R.string.sync_profile_cd))
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.sync_settings_cd))
                     }
                 }
             )
