@@ -48,6 +48,15 @@
     <string name="scan_permission_denied">Доступ к камере запрещён. Пожалуйста, предоставьте разрешение и попробуйте снова.</string>
     <string name="scan_result_prefix">Отсканировано: %1$s</string>
     <string name="scan_result_nothing">Ничего</string>
+    <string name="scan_enter_manually">Ввести QR-код вручную</string>
+    <string name="manual_qr_title">Ручной ввод</string>
+    <string name="manual_qr_subtitle">Вставьте или введите данные QR-кода ниже</string>
+    <string name="manual_qr_label">Данные QR-кода</string>
+    <string name="manual_qr_placeholder">Введите текст QR-кода здесь</string>
+    <string name="manual_qr_button">Отправить</string>
+    <string name="manual_qr_back_cd">Назад</string>
+    <string name="manual_qr_error_empty">QR-код не может быть пустым.</string>
+    <string name="manual_qr_error_invalid">Неверный формат QR-кода. Пожалуйста, проверьте данные.</string>
 
     <!-- Auth (PIN) Screen -->
     <string name="auth_pin_title">Введите ваш PIN-код</string>

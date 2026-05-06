@@ -17,6 +17,7 @@ import com.graphenelab.photosync.ui.mnemonic.MnemonicScreen
 //import com.graphenelab.photosync.ui.subscription.SubscriptionScreen
 import com.graphenelab.photosync.ui.sync.SyncScreen
 import com.graphenelab.photosync.ui.scan.ScanScreen
+import com.graphenelab.photosync.ui.scan.ManualQREntryScreen
 import com.graphenelab.photosync.ui.folders.FoldersScreen
 
 
@@ -83,6 +84,26 @@ fun AppNavigation(
                 onNavigateToResult = { qrCode ->
                     navController.currentBackStackEntry?.savedStateHandle?.set("qr_encrypted", qrCode)
                     navController.navigate("auth")
+                },
+                onNavigateToManualEntry = {
+                    navController.navigate("manual_qr")
+                }
+            )
+        }
+        composable("manual_qr") {
+            ManualQREntryScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onQrEntered = { qrCode ->
+                    // Write onto "scan"'s entry — it survives the popUpTo below and becomes
+                    // auth's previousBackStackEntry, which is where AuthScreen reads qr_encrypted from.
+                    navController.getBackStackEntry("scan").savedStateHandle["qr_encrypted"] = qrCode
+                    navController.navigate("auth") {
+                        popUpTo("scan") {
+                            inclusive = false
+                        }
+                    }
                 }
             )
         }

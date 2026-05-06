@@ -48,6 +48,15 @@
     <string name="scan_permission_denied">Camera permission denied. Please grant camera access and try again.</string>
     <string name="scan_result_prefix">Scanned: %1$s</string>
     <string name="scan_result_nothing">Nothing</string>
+    <string name="scan_enter_manually">Enter QR Code Manually</string>
+    <string name="manual_qr_title">Manual Entry</string>
+    <string name="manual_qr_subtitle">Paste or type your QR code data below</string>
+    <string name="manual_qr_label">QR Code Data</string>
+    <string name="manual_qr_placeholder">Enter QR code text here</string>
+    <string name="manual_qr_button">Submit</string>
+    <string name="manual_qr_back_cd">Back</string>
+    <string name="manual_qr_error_empty">QR code cannot be empty.</string>
+    <string name="manual_qr_error_invalid">Invalid QR code format. Please check your data.</string>
 
     <!-- Auth (PIN) Screen -->
     <string name="auth_pin_title">Enter Your PIN</string>

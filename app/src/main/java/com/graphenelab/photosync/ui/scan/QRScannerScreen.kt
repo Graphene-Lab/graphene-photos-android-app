@@ -4,7 +4,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,6 +33,7 @@ import com.graphenelab.photosync.R
 fun ScanScreen(
     modifier: Modifier = Modifier,
     onNavigateToResult: (String?) -> Unit,
+    onNavigateToManualEntry: () -> Unit,
     viewModel: ScanViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -63,7 +66,8 @@ fun ScanScreen(
     ScanContent(
         modifier = modifier,
         uiState = uiState,
-        onScanClicked = { viewModel.onScanButtonClicked(context) }
+        onScanClicked = { viewModel.onScanButtonClicked(context) },
+        onManualEntryClicked = onNavigateToManualEntry
     )
 }
 
@@ -71,12 +75,14 @@ fun ScanScreen(
 private fun ScanContent(
     modifier: Modifier,
     uiState: ScanUiState,
-    onScanClicked: () -> Unit
+    onScanClicked: () -> Unit,
+    onManualEntryClicked: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -121,6 +127,8 @@ private fun ScanContent(
             )
             Spacer(modifier = Modifier.height(20.dp))
             ScanButton(onClick = onScanClicked)
+            Spacer(modifier = Modifier.height(16.dp))
+            ManualEntryButton(onClick = onManualEntryClicked)
 
             when (val state = uiState) {
                 is ScanUiState.PermissionDenied -> PermissionDeniedMessage()
@@ -135,6 +143,13 @@ private fun ScanContent(
 private fun ScanButton(onClick: () -> Unit) {
     Button(onClick = onClick) {
         Text(stringResource(R.string.scan_button))
+    }
+}
+
+@Composable
+private fun ManualEntryButton(onClick: () -> Unit) {
+    Button(onClick = onClick) {
+        Text(stringResource(R.string.scan_enter_manually))
     }
 }
 
