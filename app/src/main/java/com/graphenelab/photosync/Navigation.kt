@@ -122,6 +122,9 @@ fun AppNavigation(
                 },
                 onNavigateToScanSetup = {
                     navController.navigate("folders?isFromScanSetup=true")
+                },
+                onNavigateToFolders = {
+                    navController.navigate("folders")
                 }
             )
         }

@@ -30,12 +30,15 @@
     <string name="sync_progress_waiting">in attesa…</string>
     <string name="sync_auto_label">Sincronizza automaticamente le nuove foto</string>
     <string name="sync_auto_subtitle">Viene eseguito periodicamente in background</string>
-    <string name="sync_manual_title">Scansione completa manuale</string>
-    <string name="sync_manual_subtitle">Trova e carica le foto perse in passato.</string>
-    <string name="sync_stop_full_scan">Interrompi scansione completa</string>
-    <string name="sync_start_full_scan">Avvia scansione completa</string>
+    <string name="sync_manual_title">Scansione completa</string>
+    <string name="sync_manual_subtitle">Trova tutte le foto, le sincronizza con il cloud (le foto già sincronizzate vengono omesse)</string>
+    <string name="sync_stop_full_scan">Ferma scansione</string>
+    <string name="sync_start_full_scan">Avvia scansione</string>
+    <string name="sync_auto_info">Viene eseguito periodicamente in background</string>
     <string name="sync_open_explorer">Apri Esplora risorse</string>
     <string name="sync_download_explorer">Scarica Esplora risorse</string>
+    <string name="sync_uploaded_photos_question">Vuoi vedere le foto caricate?</string>
+    <string name="sync_choose_folder">Scegli cartella</string>
     <string name="sync_permission_denied">Hai negato i permessi. Vai nelle impostazioni per concederli.</string>
 
     <!-- QR Scanner Screen -->
