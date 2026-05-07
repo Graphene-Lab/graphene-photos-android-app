@@ -2,72 +2,61 @@ package com.graphenelab.photosync.common
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 /**
- * A singleton object to manage and broadcast the state of the full scan.
+ * A singleton object to manage and broadcast the state of the sync process.
  * The Service writes to it, and the ViewModel reads from it.
  * Implementation of Observable pattern.
  */
 object SyncStatusManager {
-    private val _isSyncing: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing
 
-    private val _successfulSyncPhotosCount: MutableStateFlow<Int> = MutableStateFlow(0)
-    val successfulSyncPhotosCount: StateFlow<Int> = _successfulSyncPhotosCount
+    private val _currentFolderMetrics = MutableStateFlow(SyncMetrics())
+    val currentFolderMetrics: StateFlow<SyncMetrics> = _currentFolderMetrics
 
-    private val _failedSyncPhotosCount: MutableStateFlow<Int> = MutableStateFlow(0)
-    val failedSyncPhotosCount: StateFlow<Int> = _failedSyncPhotosCount
+    private val _sessionMetrics = MutableStateFlow(SyncMetrics())
+    val sessionMetrics: StateFlow<SyncMetrics> = _sessionMetrics
 
-    private var _discoveredPhotosCount: MutableStateFlow<Int> = MutableStateFlow(0)
-    val discoveredPhotosCount: StateFlow<Int> = _discoveredPhotosCount
-
-    private var _noPhotosFoundToSync: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val noPhotosFoundToSync: StateFlow<Boolean> = _noPhotosFoundToSync
-
-    private var _totalProcessedPhotosCount: Int = 0
+    private val _currentFolderName = MutableStateFlow<String?>(null)
+    val currentFolderName: StateFlow<String?> = _currentFolderName
 
     fun updateSyncStatus(isSyncing: Boolean) {
         _isSyncing.value = isSyncing
     }
 
-    fun updateNoPhotosFoundToSync(noPhotosFoundToSync: Boolean) {
-        _noPhotosFoundToSync.value = noPhotosFoundToSync
+    fun updateCurrentFolder(name: String?) {
+        _currentFolderName.value = name
+    }
+
+    fun updateNoPhotosFoundToSync(noPhotosFound: Boolean) {
+        _sessionMetrics.update { it.copy(noPhotosFoundToSync = noPhotosFound) }
     }
 
     fun resetSyncSession() {
         _isSyncing.value = false
-        _successfulSyncPhotosCount.value = 0
-        _failedSyncPhotosCount.value = 0
-        _discoveredPhotosCount.value = 0
-        _noPhotosFoundToSync.value = false
-        _totalProcessedPhotosCount = 0
+        _currentFolderName.value = null
+        _sessionMetrics.value = SyncMetrics()
+        resetFolderCounters()
     }
 
-    fun turnOfSyncStatusBasedOnIfAllPhotosFetched() {
-        if (_discoveredPhotosCount.value <= (_successfulSyncPhotosCount.value + _failedSyncPhotosCount.value))
-            _isSyncing.value = false
+    fun resetFolderCounters() {
+        _currentFolderMetrics.value = SyncMetrics()
     }
 
-    //TODO: add _totalPhotosCount calculation to separate function
-    fun updateSuccessfulSyncPhotosCount() {
-        _successfulSyncPhotosCount.value++
-        _totalProcessedPhotosCount =
-            _successfulSyncPhotosCount.value + _failedSyncPhotosCount.value;
-    }
-
-    fun updateFailedSyncPhotosCount(count: Int) {
-        _failedSyncPhotosCount.value = count
-        _totalProcessedPhotosCount =
-            _successfulSyncPhotosCount.value + _failedSyncPhotosCount.value;
+    fun incrementSuccessfulSyncPhotosCount() {
+        _currentFolderMetrics.update { it.copy(successful = it.successful + 1) }
+        _sessionMetrics.update { it.copy(successful = it.successful + 1) }
     }
 
     fun incrementFailedSyncPhotosCount() {
-        _failedSyncPhotosCount.value++
-        _totalProcessedPhotosCount =
-            _successfulSyncPhotosCount.value + _failedSyncPhotosCount.value
+        _currentFolderMetrics.update { it.copy(failed = it.failed + 1) }
+        _sessionMetrics.update { it.copy(failed = it.failed + 1) }
     }
 
     fun increaseDiscoveredPhotosCount(countToIncrease: Int) {
-        _discoveredPhotosCount.value += countToIncrease
+        _currentFolderMetrics.update { it.copy(discovered = it.discovered + countToIncrease) }
+        _sessionMetrics.update { it.copy(discovered = it.discovered + countToIncrease) }
     }
 }

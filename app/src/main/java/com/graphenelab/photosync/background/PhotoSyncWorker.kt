@@ -10,6 +10,7 @@ import com.graphenelab.communication.crypto.IZeroKnowledgeProof
 import com.graphenelab.photosync.common.UploadTimeouts
 import com.graphenelab.photosync.common.config.SyncConfig
 import com.graphenelab.photosync.domain.model.GalleryPhoto
+import com.graphenelab.photosync.domain.model.TimeInterval
 import com.graphenelab.photosync.domain.repositroy.IGalleryRepository
 import com.graphenelab.photosync.domain.repositroy.ISyncRepository
 import com.graphenelab.photosync.manager.interfaces.ICloudManager
@@ -44,41 +45,59 @@ class PhotoSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         println("Worker: Starting periodic 'From Now' sync check.")
         try {
+            val selectedFolderIds = syncRepository.selectedFolders.first()
             val syncPoint = syncRepository.syncFromNowPoint.first()
-            if (syncPoint == 0L) {
-                println("Worker: 'Sync From Now' is not set up. Skipping.")
+            
+            if (syncPoint == 0L || selectedFolderIds.isEmpty()) {
+                println("Worker: 'Sync From Now' not set or no folders selected. Skipping.")
                 return Result.success()
             }
 
-            val allIntervals = syncRepository.syncedIntervals.first().toMutableList()
-            val fromNowIntervalIndex = allIntervals.indexOfFirst { it.start == syncPoint }
-            if (fromNowIntervalIndex == -1) {
-                println("Worker: Error! Anchor interval not found. Failing job.")
-                return Result.failure()
+            for (bucketId in selectedFolderIds) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                println("Worker: Checking folder $bucketId")
+
+                // find fromNowInterval (i.e. interval created for 'from now on sync')
+                val allIntervals = syncRepository.getSyncedIntervals(bucketId).first().toMutableList()
+                val fromNowIntervalIndex = allIntervals.indexOfFirst { it.start == syncPoint }
+                val fromNowInterval = if (fromNowIntervalIndex == -1) {
+                    // Initialize it if missing
+                    val newInterval = TimeInterval(start = syncPoint, end = syncPoint)
+                    allIntervals.add(newInterval)
+                    syncRepository.saveSyncedIntervals(bucketId, allIntervals)
+                    // Use the new one immediately!
+                    newInterval
+                } else {
+                    allIntervals[fromNowIntervalIndex]
+                }
+
+                val photosToSync =
+                    galleryRepository.getPhotos(startTimeSeconds = fromNowInterval.end + 1, bucketId = bucketId)
+                
+                if (photosToSync.isEmpty()) {
+                    println("Worker: No new photos in folder $bucketId.")
+                    continue
+                }
+
+                println("Worker: Found ${photosToSync.size} new photos in $bucketId. Starting upload...")
+
+                val onBatchSave: suspend (Long) -> Unit = { newTimestamp ->
+                    val updatedInterval = fromNowInterval.copy(end = newTimestamp)
+                    val currentIntervals = syncRepository.getSyncedIntervals(bucketId).first().toMutableList()
+                    val idx = currentIntervals.indexOfFirst { it.start == syncPoint }
+                    if (idx != -1) {
+                        currentIntervals[idx] = updatedInterval
+                        syncRepository.saveSyncedIntervals(bucketId, currentIntervals)
+                        println("Worker: Saved batch progress for $bucketId. New end is $newTimestamp")
+                    }
+                }
+
+                syncAndSaveInBatches(
+                    photos = photosToSync,
+                    initialTimestamp = fromNowInterval.end,
+                    onBatchSave = onBatchSave
+                )
             }
-
-            val fromNowInterval = allIntervals[fromNowIntervalIndex]
-            val photosToSync =
-                galleryRepository.getPhotos(startTimeSeconds = fromNowInterval.end + 1)
-            if (photosToSync.isEmpty()) {
-                println("Worker: No new photos found.")
-                return Result.success()
-            }
-
-            println("Worker: Found ${photosToSync.size} new photos. Starting upload...")
-
-            val onBatchSave: suspend (Long) -> Unit = { newTimestamp ->
-                val updatedInterval = fromNowInterval.copy(end = newTimestamp)
-                allIntervals[fromNowIntervalIndex] = updatedInterval
-                syncRepository.saveSyncedIntervals(allIntervals)
-                println("Worker: Saved batch progress. New end is $newTimestamp")
-            }
-
-            syncAndSaveInBatches(
-                photos = photosToSync,
-                initialTimestamp = fromNowInterval.end,
-                onBatchSave = onBatchSave
-            )
 
             return Result.success()
         } catch (e: Exception) {
@@ -98,7 +117,6 @@ class PhotoSyncWorker @AssistedInject constructor(
 
         for (photo in photos) {
             ensureActive()
-
             withContext(Dispatchers.IO) {
                 try {
                     // 1. Read original file content directly into memory

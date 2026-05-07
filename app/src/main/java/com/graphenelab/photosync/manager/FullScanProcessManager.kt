@@ -48,9 +48,9 @@ class FullScanProcessManager @Inject constructor(
 
     private val concurrentLimit = Semaphore(2) // Allow max N concurrent operations
 
-    override suspend fun initializeIntervals(): MutableList<TimeInterval> {
+    override suspend fun initializeIntervals(bucketId: String): MutableList<TimeInterval> {
         if (BuildConfig.DEBUG) syncIntervalRepository.clearSyncData()// TODO: Note - clears synced photos.
-        val allIntervals = syncIntervalRepository.syncedIntervals.first().toMutableList()
+        val allIntervals = syncIntervalRepository.getSyncedIntervals(bucketId).first().toMutableList()
         // Ensure the initial 0-timestamp interval exists for complete coverage.
         if (allIntervals.none { it.start == 0L }) {
             allIntervals.add(0, TimeInterval(0, 0))
@@ -60,13 +60,13 @@ class FullScanProcessManager @Inject constructor(
     }
 
     override suspend fun processNextTwoIntervals(
-        currentIntervals: MutableList<TimeInterval>, currentCoroutineContext: CoroutineContext
+        bucketId: String, currentIntervals: MutableList<TimeInterval>, currentCoroutineContext: CoroutineContext
     ): MutableList<TimeInterval> {
         val interval1 = currentIntervals[0]
         val interval2 = currentIntervals[1]
 
         val photosInGap =
-            galleryRepository.getPhotosInInterval(interval1.end + 1, interval2.start - 1)
+            galleryRepository.getPhotosInInterval(interval1.end + 1, interval2.start - 1, bucketId)
 
         var tempInterval1 = interval1
         if (photosInGap.isNotEmpty()) {
@@ -75,7 +75,7 @@ class FullScanProcessManager @Inject constructor(
                 // Save current progress immediately for crash recovery.
                 val updatedListForSave = currentIntervals.toMutableList()
                 updatedListForSave[0] = tempInterval1
-                syncIntervalRepository.saveSyncedIntervals(updatedListForSave)
+                syncIntervalRepository.saveSyncedIntervals(bucketId, updatedListForSave)
             }
             SyncStatusManager.increaseDiscoveredPhotosCount(photosInGap.size)
             syncAndSaveInBatches(
@@ -91,11 +91,12 @@ class FullScanProcessManager @Inject constructor(
         val newList = currentIntervals.drop(2).toMutableList()
         newList.add(0, mergedInterval)
 
-        syncIntervalRepository.saveSyncedIntervals(newList)
+        syncIntervalRepository.saveSyncedIntervals(bucketId, newList)
         return newList
     }
 
     override suspend fun processTailEnd(
+        bucketId: String,
         currentIntervals: MutableList<TimeInterval>,
         currentCoroutineContext: CoroutineContext
     ): MutableList<TimeInterval> {
@@ -103,14 +104,14 @@ class FullScanProcessManager @Inject constructor(
         if (currentIntervals.isEmpty()) return currentIntervals
 
         val finalInterval = currentIntervals.first()
-        // Fetch photos beyond the last synced timestamp.
-        val photosInTail = galleryRepository.getPhotos(startTimeSeconds = finalInterval.end + 1)
+        // Fetch photos beyond the last synced timestamp for this bucket.
+        val photosInTail = galleryRepository.getPhotos(startTimeSeconds = finalInterval.end + 1, bucketId = bucketId)
 
         if (photosInTail.isNotEmpty()) {
             val onBatchSave: suspend (Long) -> Unit = { newEndTimestamp ->
                 val updatedInterval = finalInterval.copy(end = newEndTimestamp)
                 currentIntervals[0] = updatedInterval
-                syncIntervalRepository.saveSyncedIntervals(currentIntervals)
+                syncIntervalRepository.saveSyncedIntervals(bucketId, currentIntervals)
             }
             SyncStatusManager.increaseDiscoveredPhotosCount(photosInTail.size)
 
@@ -194,7 +195,6 @@ class FullScanProcessManager @Inject constructor(
                                                     errorMessage = progress.errorMessage ?: "Upload failed"
                                                 )
                                                 SyncStatusManager.incrementFailedSyncPhotosCount()
-                                                SyncStatusManager.turnOfSyncStatusBasedOnIfAllPhotosFetched()
                                             }
                                             if (finished.compareAndSet(false, true) && continuation.isActive) {
                                                 continuation.resume(Unit)
@@ -202,8 +202,7 @@ class FullScanProcessManager @Inject constructor(
                                         } else if (progress.isCompleted) {
                                             CoroutineScope(Dispatchers.Main).launch {
                                                 PhotoSyncStatusManager.markPhotoCompleted(photo.displayName)
-                                                SyncStatusManager.updateSuccessfulSyncPhotosCount()
-                                                SyncStatusManager.turnOfSyncStatusBasedOnIfAllPhotosFetched()
+                                                SyncStatusManager.incrementSuccessfulSyncPhotosCount()
                                             }
                                             if (finished.compareAndSet(false, true) && continuation.isActive) {
                                                 continuation.resume(Unit)
@@ -231,7 +230,6 @@ class FullScanProcessManager @Inject constructor(
                                         errorMessage = "Upload timed out waiting for completion callback"
                                     )
                                     SyncStatusManager.incrementFailedSyncPhotosCount()
-                                    SyncStatusManager.turnOfSyncStatusBasedOnIfAllPhotosFetched()
                                 }
                             }
                             photo.dateAdded // Return timestamp for batch tracking
@@ -246,7 +244,6 @@ class FullScanProcessManager @Inject constructor(
                                     errorMessage = e.message ?: "Upload failed"
                                 )
                                 SyncStatusManager.incrementFailedSyncPhotosCount()
-                                SyncStatusManager.turnOfSyncStatusBasedOnIfAllPhotosFetched()
                             }
                             photo.dateAdded
                         }

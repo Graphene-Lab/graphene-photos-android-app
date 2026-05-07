@@ -15,15 +15,16 @@ import com.graphenelab.photosync.manager.interfaces.IBackgroundSyncManager
 import com.graphenelab.photosync.manager.interfaces.IExplorerAppManager
 import com.graphenelab.photosync.manager.interfaces.IPermissionsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
 import javax.inject.Inject
 
 sealed class SyncEvent {
@@ -46,61 +47,24 @@ class SyncViewModel @Inject constructor(
     private var screenStarted = false
 
     init {
-        // Observe full scan progress from the service via SyncStatusManager
-        viewModelScope.launch {
-            SyncStatusManager.isSyncing.collect { isSyncing ->
-                _uiState.update {
-                    it.copy(
-                        isFullScanInProgress = isSyncing
-                    )
-                }
+        // Observe all sync-related flows and combine them into a single UI state update.
+        combine(
+            SyncStatusManager.isSyncing,
+            SyncStatusManager.currentFolderMetrics,
+            SyncStatusManager.sessionMetrics,
+            SyncStatusManager.currentFolderName,
+            PhotoSyncStatusManager.currentPhotoProgress
+        ) { isSyncing, folderMetrics, sessionMetrics, folderName, progress ->
+            _uiState.update {
+                it.copy(
+                    isFullScanInProgress = isSyncing,
+                    folderMetrics = folderMetrics,
+                    sessionMetrics = sessionMetrics,
+                    currentFolderName = folderName,
+                    progress = progress
+                )
             }
-        }
-        viewModelScope.launch {
-            SyncStatusManager.successfulSyncPhotosCount.collect { count ->
-                _uiState.update {
-                    it.copy(
-                        completedPhotos = count
-                    )
-                }
-            }
-        }
-        viewModelScope.launch {
-            SyncStatusManager.failedSyncPhotosCount.collect { count ->
-                _uiState.update {
-                    it.copy(
-                        failedPhotos = count
-                    )
-                }
-            }
-        }
-        viewModelScope.launch {
-            SyncStatusManager.discoveredPhotosCount.collect { count ->
-                _uiState.update {
-                    it.copy(
-                        totalPhotosToBeUploaded = count
-                    )
-                }
-            }
-        }
-        viewModelScope.launch {
-            SyncStatusManager.noPhotosFoundToSync.collect { noPhotosDiscoveredForSync ->
-                _uiState.update {
-                    it.copy(
-                        noPhotosToSync = noPhotosDiscoveredForSync
-                    )
-                }
-            }
-        }
-        viewModelScope.launch {
-            PhotoSyncStatusManager.currentPhotoProgress.collect { progress ->
-                _uiState.update {
-                    it.copy(
-                        progress = progress
-                    )
-                }
-            }
-        }
+        }.launchIn(viewModelScope)
     }
 
     fun onScreenStarted() {
@@ -203,13 +167,11 @@ class SyncViewModel @Inject constructor(
             }"
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-
             val hasMediaPermission = permissions.getOrDefault(Manifest.permission.READ_MEDIA_IMAGES, false)
                     || permissions.getOrDefault(Manifest.permission.READ_MEDIA_VIDEO, false)
                     || permissions.getOrDefault(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED, false)
 
-            if (hasMediaPermission
-            ) {
+            if (hasMediaPermission) {
                 if (_uiState.value.startFullScanButtonClicked) {
                     viewModelScope.launch {
                         _events.send(SyncEvent.NavigateToScanSetup)
@@ -219,39 +181,28 @@ class SyncViewModel @Inject constructor(
                 }
 
                 _uiState.update {
-                    it.copy(
-                        permissionDenied = false,
-                    )
+                    it.copy(permissionDenied = false)
                 }
             } else {
                 _uiState.update {
-                    it.copy(
-                        permissionDenied = true,
-                    )
+                    it.copy(permissionDenied = true)
                 }
             }
         } else {
             if (permissions.getOrDefault(Manifest.permission.READ_EXTERNAL_STORAGE, false)) {
                 Log.d("SyncViewModel", "Permission granted")
                 if (_uiState.value.startFullScanButtonClicked) {
-                    Log.d("SyncViewModel", "Permission 1")
                     viewModelScope.launch {
                         _events.send(SyncEvent.NavigateToScanSetup)
                     }
                 } else if (_uiState.value.syncFromNowButtonClicked) {
-                    Log.d("SyncViewModel", "Permission 2")
                     onFromNowSyncToggled(true)
                 }
             } else {
                 _uiState.update {
-                    it.copy(
-                        permissionDenied = true,
-                    )
+                    it.copy(permissionDenied = true)
                 }
             }
         }
-
-
     }
-
 }

@@ -40,12 +40,15 @@ class BackgroundSyncManager @Inject constructor(
     override suspend fun schedulePeriodicSync() {
         if (syncRepository.syncFromNowPoint.first() == 0L) {
             val syncStartTime = System.currentTimeMillis() / 1000L
-            val newInterval = TimeInterval(start = syncStartTime, end = syncStartTime)
-            val currentIntervals = syncRepository.syncedIntervals.first()
-            val allIntervals = currentIntervals + newInterval
+            val selectedFolders = syncRepository.selectedFolders.first()
+            
+            for (bucketId in selectedFolders) {
+                val currentIntervals = syncRepository.getSyncedIntervals(bucketId).first()
+                val newInterval = TimeInterval(start = syncStartTime, end = syncStartTime)
+                syncRepository.saveSyncedIntervals(bucketId, currentIntervals + newInterval)
+            }
 
             syncRepository.saveSyncFromNowPoint(syncStartTime)
-            syncRepository.saveSyncedIntervals(allIntervals)
         }
 
         val request = PeriodicWorkRequestBuilder<PhotoSyncWorker>(15, TimeUnit.MINUTES)

@@ -74,7 +74,6 @@ class ProfileViewModel @Inject constructor(
                         isLoadingPlan = false
                     )
                 }
-                return@onSuccess
             }
                 .onFailure { e ->
                     _uiState.update {
@@ -83,7 +82,6 @@ class ProfileViewModel @Inject constructor(
                             planError = e.message ?: "Failed to load subscription plan"
                         )
                     }
-                    return@onFailure
                 }
         }
     }
@@ -139,12 +137,8 @@ class ProfileViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Get synced intervals from repository
-                val intervals = syncRepository.syncedIntervals.first()
-                Log.d(TAG, "deleteSyncedPhotos: Found ${intervals.size} synced intervals")
-
-                if (intervals.isEmpty()) {
-                    Log.w(TAG, "deleteSyncedPhotos: No synced intervals found")
+                val selectedFolders = syncRepository.selectedFolders.first()
+                if (selectedFolders.isEmpty()) {
                     _uiState.update {
                         it.copy(
                             isDeletingSyncedPhotos = false,
@@ -155,14 +149,19 @@ class ProfileViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Get URIs of photos to delete
-                val photoUris = withContext(Dispatchers.IO) {
-                    galleryRepository.getSyncedPhotosUris(intervals)
-                }
-                Log.d(TAG, "deleteSyncedPhotos: Found ${photoUris.size} photos to delete")
+                val allPhotoUris = mutableListOf<android.net.Uri>()
 
-                if (photoUris.isEmpty()) {
-                    Log.w(TAG, "deleteSyncedPhotos: No photo URIs found")
+                withContext(Dispatchers.IO) {
+                    for (bucketId in selectedFolders) {
+                        val intervals = syncRepository.getSyncedIntervals(bucketId).first()
+                        if (intervals.isNotEmpty()) {
+                            val uris = galleryRepository.getSyncedPhotosUris(intervals, bucketId)
+                            allPhotoUris.addAll(uris)
+                        }
+                    }
+                }
+
+                if (allPhotoUris.isEmpty()) {
                     _uiState.update {
                         it.copy(
                             isDeletingSyncedPhotos = false,
@@ -174,11 +173,11 @@ class ProfileViewModel @Inject constructor(
                 }
 
                 // For Android 11+ (API 30+), return URIs for UI to create delete request
-                Log.d(TAG, "deleteSyncedPhotos: Returning ${photoUris.size} photo URIs for deletion (Android 11+)")
+                Log.d(TAG, "deleteSyncedPhotos: Returning ${allPhotoUris.size} photo URIs for deletion (Android 11+)")
                 _uiState.update {
                     it.copy(
                         isDeletingSyncedPhotos = false,
-                        photoUrisToDelete = photoUris
+                        photoUrisToDelete = allPhotoUris
                     )
                 }
             } catch (e: Exception) {

@@ -28,6 +28,7 @@
     <string name="sync_discovered_photos">Fotos descubiertas:</string>
     <string name="sync_progress_info">Información de progreso:</string>
     <string name="sync_progress_waiting">esperando…</string>
+    <string name="sync_scanning_folder">Escaneando carpeta: %1$s</string>
     <string name="sync_auto_label">Sincronizar nuevas fotos automáticamente</string>
     <string name="sync_auto_subtitle">Se ejecuta periódicamente en segundo plano</string>
     <string name="sync_manual_title">Escaneo completo</string>

@@ -99,14 +99,21 @@ fun SyncScreen(
                     Column(Modifier.padding(16.dp)) {
                         Text(text = stringResource(R.string.sync_status_label), style = MaterialTheme.typography.titleMedium)
                         if (!uiState.isFullScanInProgress) {
-                            if (uiState.completedPhotos > 0) {
+                            if (uiState.sessionMetrics.successful > 0 || uiState.sessionMetrics.failed > 0) {
                                 Text(
-                                    text = stringResource(R.string.sync_success, uiState.completedPhotos),
+                                    text = stringResource(R.string.sync_success, uiState.sessionMetrics.successful),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
+                                if (uiState.sessionMetrics.failed > 0) {
+                                    Text(
+                                        text = stringResource(R.string.sync_failed_photos) + ": " + uiState.sessionMetrics.failed,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             } else {
-                                if (uiState.noPhotosToSync) {
+                                if (uiState.sessionMetrics.noPhotosFoundToSync) {
                                     Text(
                                         text = stringResource(R.string.sync_no_photos),
                                         style = MaterialTheme.typography.bodyMedium,
@@ -128,13 +135,21 @@ fun SyncScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
+                            if (uiState.currentFolderName != null) {
+                                Text(
+                                    text = stringResource(R.string.sync_scanning_folder, uiState.currentFolderName!!),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
                             Row {
                                 Text(
                                     text = stringResource(R.string.sync_uploaded_photos),
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
-                                    text = uiState.completedPhotos.toString(),
+                                    text = uiState.folderMetrics.successful.toString(),
                                     modifier = Modifier.padding(start = 8.dp)
                                 )
                             }
@@ -144,7 +159,7 @@ fun SyncScreen(
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
-                                    text = uiState.failedPhotos.toString(),
+                                    text = uiState.folderMetrics.failed.toString(),
                                     modifier = Modifier.padding(start = 8.dp)
                                 )
                             }
@@ -154,7 +169,7 @@ fun SyncScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                 )
                                 Text(
-                                    text = uiState.totalPhotosToBeUploaded.toString(),
+                                    text = uiState.folderMetrics.discovered.toString(),
                                     modifier = Modifier.padding(start = 8.dp)
                                 )
                             }

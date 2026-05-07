@@ -20,19 +20,32 @@ class SyncPreferencesDataSource @Inject constructor(
 ) {
 
     companion object {
-        private val SYNC_INTERVALS_KEY = stringPreferencesKey("sync_intervals")
+        private val FOLDER_SYNC_INTERVALS_KEY = stringPreferencesKey("sync_intervals_map")
         private val SYNC_FROM_NOW_POINT_KEY = longPreferencesKey("sync_from_now_point")
         private val SYNC_SELECTED_FOLDERS_KEY = stringSetPreferencesKey("sync_selected_folders")
     }
 
-    val syncedIntervals: Flow<List<TimeInterval>> =
-    context.dataStore.data.map { prefs ->
-            Json.decodeFromString(prefs[SYNC_INTERVALS_KEY] ?: "[]")
-    }
+    private val allSyncedIntervals: Flow<Map<String, List<TimeInterval>>> =
+        context.dataStore.data.map { prefs ->
+            try {
+                Json.decodeFromString(prefs[FOLDER_SYNC_INTERVALS_KEY] ?: "{}")
+            } catch (_: Exception) {
+                emptyMap()
+            }
+        }
 
-    suspend fun saveSyncedIntervals(intervals: List<TimeInterval>) {
-        context.dataStore.edit {
-            it[SYNC_INTERVALS_KEY] = Json.encodeToString(intervals)
+    fun getSyncedIntervals(bucketId: String): Flow<List<TimeInterval>> =
+        allSyncedIntervals.map { it[bucketId] ?: emptyList() }
+
+    suspend fun saveSyncedIntervals(bucketId: String, intervals: List<TimeInterval>) {
+        context.dataStore.edit { prefs ->
+            val currentMap = try {
+                Json.decodeFromString<Map<String, List<TimeInterval>>>(prefs[FOLDER_SYNC_INTERVALS_KEY] ?: "{}").toMutableMap()
+            } catch (e: Exception) {
+                mutableMapOf()
+            }
+            currentMap[bucketId] = intervals
+            prefs[FOLDER_SYNC_INTERVALS_KEY] = Json.encodeToString(currentMap)
         }
     }
 
@@ -63,7 +76,7 @@ class SyncPreferencesDataSource @Inject constructor(
 
     suspend fun clearSyncData() {
         context.dataStore.edit { 
-            it.remove(SYNC_INTERVALS_KEY)
+            it.remove(FOLDER_SYNC_INTERVALS_KEY)
             it.remove(SYNC_FROM_NOW_POINT_KEY)
         }
     }

@@ -3,34 +3,29 @@ package com.graphenelab.photosync.data.local.mediastore
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
-import android.os.Environment
 import android.provider.MediaStore
-import com.graphenelab.photosync.BuildConfig
-import com.graphenelab.photosync.data.local.datastore.SyncPreferencesDataSource
 import com.graphenelab.photosync.domain.model.GalleryPhoto
 import com.graphenelab.photosync.domain.model.ImageFolder
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 class PhotoLocalDataSource @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val prefs: SyncPreferencesDataSource
+    @ApplicationContext private val context: Context
 ) {
 
-    fun getPhotos(startTimeSeconds: Long): List<GalleryPhoto> {
-        return queryPhotos(startTimeSeconds = startTimeSeconds)
+    fun getPhotos(startTimeSeconds: Long, bucketId: String): List<GalleryPhoto> {
+        return queryPhotos(startTimeSeconds = startTimeSeconds, bucketId = bucketId)
     }
 
-    fun getPhotosInInterval(start: Long, end: Long): List<GalleryPhoto> {
+    fun getPhotosInInterval(start: Long, end: Long, bucketId: String): List<GalleryPhoto> {
         if (start > end) return emptyList()
-        return queryPhotos(startTimeSeconds = start, endTimeSeconds = end)
+        return queryPhotos(startTimeSeconds = start, endTimeSeconds = end, bucketId = bucketId)
     }
 
     private fun queryPhotos(
         startTimeSeconds: Long? = null,
-        endTimeSeconds: Long? = null
+        endTimeSeconds: Long? = null,
+        bucketId: String
     ): List<GalleryPhoto> {
         val photos = mutableListOf<GalleryPhoto>()
         val projection = arrayOf(
@@ -54,15 +49,8 @@ class PhotoLocalDataSource @Inject constructor(
             selectionArgsList.add(it.toString())
         }
 
-        var selectedFolders = runBlocking { prefs.selectedFolders.first() }
-
-        if (selectedFolders.isNotEmpty()) {
-            val placeholders = selectedFolders.joinToString(", ") { "?" }
-            selectionParts.add("${MediaStore.Images.Media.BUCKET_ID} IN ($placeholders)")
-            selectionArgsList.addAll(selectedFolders)
-        } else {
-            return emptyList()
-        }
+        selectionParts.add("${MediaStore.Images.Media.BUCKET_ID} = ?")
+        selectionArgsList.add(bucketId)
 
         val selection = selectionParts.joinToString(" AND ")
         val selectionArgs = selectionArgsList.toTypedArray()
@@ -113,14 +101,14 @@ class PhotoLocalDataSource @Inject constructor(
      * Gets URIs of synced photos for deletion.
      * Returns list of photo URIs to delete.
      */
-    fun getSyncedPhotosUris(intervals: List<com.graphenelab.photosync.domain.model.TimeInterval>): List<Uri> {
+    fun getSyncedPhotosUris(intervals: List<com.graphenelab.photosync.domain.model.TimeInterval>, bucketId: String): List<Uri> {
         if (intervals.isEmpty()) return emptyList()
 
         val photoUris = mutableListOf<Uri>()
 
         // Collect photo URIs for each interval
         intervals.forEach { interval ->
-            val photos = getPhotosInInterval(interval.start, interval.end)
+            val photos = getPhotosInInterval(interval.start, interval.end, bucketId)
             photoUris.addAll(photos.map { it.path })
         }
 

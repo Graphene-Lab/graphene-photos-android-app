@@ -8,10 +8,12 @@ import androidx.core.app.NotificationCompat
 import com.graphenelab.communication.crypto.RequestManager
 import com.graphenelab.photosync.common.SyncStatusManager
 import com.graphenelab.photosync.manager.interfaces.IFullScanProcessManager
+import com.graphenelab.photosync.domain.repositroy.ISyncRepository
+import com.graphenelab.photosync.domain.repositroy.IGalleryRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
-import kotlin.coroutines.coroutineContext // Required for coroutineContext extension property
 
 @AndroidEntryPoint
 class FullScanService : Service() {
@@ -19,6 +21,12 @@ class FullScanService : Service() {
 
     @Inject
     lateinit var fullScanProcessor: IFullScanProcessManager
+
+    @Inject
+    lateinit var syncRepository: ISyncRepository
+
+    @Inject
+    lateinit var galleryRepository: IGalleryRepository
 
     private lateinit var notificationManager: NotificationManager
 
@@ -72,23 +80,13 @@ class FullScanService : Service() {
 
         // Collect status updates from the processor to manage the foreground notification.
         serviceScope.launch {
-            SyncStatusManager.successfulSyncPhotosCount.collect { successfulSyncPhotosCount ->
-                updateForegroundNotification("Synced: $successfulSyncPhotosCount photos")
+            SyncStatusManager.sessionMetrics.collect { metrics ->
+                updateForegroundNotification("Synced: ${metrics.successful} photos")
             }
         }
         // Launch the core full scan operation in a separate coroutine.
         serviceScope.launch {
             startFullScanLogicInternal()
-        }
-
-        serviceScope.launch {
-            SyncStatusManager.isSyncing.collect { it ->
-                if (!it) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                    SyncStatusManager.updateSyncStatus(false)
-                }
-            }
         }
     }
 
@@ -111,45 +109,61 @@ class FullScanService : Service() {
         SyncStatusManager.updateSyncStatus(true)
 
         try {
-            var allIntervals = fullScanProcessor.initializeIntervals()
-            if (allIntervals.isEmpty()) {
+            val selectedFolderIds = syncRepository.selectedFolders.first()
+            if (selectedFolderIds.isEmpty()) {
                 SyncStatusManager.updateSyncStatus(false)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return
             }
-            // Process gaps and merge intervals until less than two remain.
-            while (allIntervals.size >= 2) {
-                coroutineContext.ensureActive() // Ensure the coroutine is still active for cancellation.
-                allIntervals =
-                    fullScanProcessor.processNextTwoIntervals(allIntervals, coroutineContext)
+
+            val availableFolders = withContext(Dispatchers.IO) {
+                galleryRepository.getAvailableFolders()
+            }
+            
+            for (bucketId in selectedFolderIds) {
+                currentCoroutineContext().ensureActive()
+                
+                // Find display name for UI
+                val folderName = availableFolders.find { it.bucketId == bucketId }?.displayName ?: bucketId
+                
+                // Update UI status for current folder
+                SyncStatusManager.updateCurrentFolder(folderName)
+                SyncStatusManager.resetFolderCounters()
+
+                var allIntervals = fullScanProcessor.initializeIntervals(bucketId)
+                if (allIntervals.isEmpty()) continue
+
+                // Process gaps and merge intervals until less than two remain.
+                while (allIntervals.size >= 2) {
+                    currentCoroutineContext().ensureActive()
+                    allIntervals = fullScanProcessor.processNextTwoIntervals(bucketId, allIntervals,
+                        currentCoroutineContext()
+                    )
+                }
+
+                currentCoroutineContext().ensureActive()
+                // Process any remaining photos at the end of the timeline.
+                fullScanProcessor.processTailEnd(bucketId, allIntervals, currentCoroutineContext())
             }
 
-            coroutineContext.ensureActive() // Ensure active before processing tail.
-            // Process any remaining photos at the end of the timeline.
-            fullScanProcessor.processTailEnd(allIntervals, coroutineContext)
-            if (SyncStatusManager.discoveredPhotosCount.value == 0) {
+            if (SyncStatusManager.sessionMetrics.value.discovered == 0) {
                 SyncStatusManager.updateNoPhotosFoundToSync(true)
-                SyncStatusManager.updateSyncStatus(false)
-                return
             }
 
-            val discovered = SyncStatusManager.discoveredPhotosCount.value
-            val processed =
-                SyncStatusManager.successfulSyncPhotosCount.value + SyncStatusManager.failedSyncPhotosCount.value
-            if (discovered > processed) {
-                Log.i(
-                    TAG,
-                    "Full scan processing finished with incomplete counters. discovered=$discovered, processed=$processed. Forcing sync stop."
-                )
-            }
             SyncStatusManager.updateSyncStatus(false)
+            SyncStatusManager.updateCurrentFolder(null)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
 
         } catch (e: Exception) {
             // Re-throw CancellationException to propagate cancellation correctly.
             if (e is CancellationException) throw e
+            Log.e(TAG, "Error in full scan logic", e)
             SyncStatusManager.updateSyncStatus(false)
-        } finally {
+            SyncStatusManager.updateCurrentFolder(null)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
         }
     }
 

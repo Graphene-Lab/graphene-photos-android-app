@@ -9,13 +9,14 @@ import kotlinx.coroutines.flow.Flow
  * and the starting point for future "sync from now" operations.
  */
 interface ISyncRepository {
-    val syncedIntervals: Flow<List<TimeInterval>>
+    fun getSyncedIntervals(bucketId: String): Flow<List<TimeInterval>>
 
     /**
-     * Saves a list of time intervals that have been successfully synced.
+     * Saves a list of time intervals that have been successfully synced for a specific folder.
+     * @param bucketId: The ID of the folder.
      * @param intervals: The list of time intervals to be saved.
      */
-    suspend fun saveSyncedIntervals(intervals: List<TimeInterval>)
+    suspend fun saveSyncedIntervals(bucketId: String, intervals: List<TimeInterval>)
 
     /**
      * Retrieves the starting point for future "sync from now" operations.
