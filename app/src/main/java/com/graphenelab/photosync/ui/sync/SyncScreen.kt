@@ -5,8 +5,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
@@ -79,6 +81,7 @@ fun SyncScreen(
             )
         }
     ) { paddingValues ->
+        val scrollState = rememberScrollState()
         Surface(
             modifier = Modifier
                 .fillMaxSize()
@@ -88,6 +91,7 @@ fun SyncScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(scrollState)
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
