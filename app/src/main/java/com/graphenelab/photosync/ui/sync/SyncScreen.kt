@@ -48,17 +48,13 @@ fun SyncScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-
         Log.d("SyncScreen", "Permission result: $permissions")
         syncViewModel.handlePermissionResult(permissions)
-
-
     }
 
     // One-time launcher setup
     LaunchedEffect(Unit) {
         onScreenDisplayed?.invoke()
-        withFrameNanos { }
         syncViewModel.onScreenStarted()
         syncViewModel.setPermissionLauncher(permissionLauncher)
     }
@@ -98,6 +94,7 @@ fun SyncScreen(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text(text = stringResource(R.string.sync_status_label), style = MaterialTheme.typography.titleMedium)
+                        
                         if (!uiState.isFullScanInProgress) {
                             if (uiState.sessionMetrics.successful > 0 || uiState.sessionMetrics.failed > 0) {
                                 Text(
@@ -126,9 +123,7 @@ fun SyncScreen(
                                         modifier = Modifier.padding(top = 4.dp)
                                     )
                                 }
-
                             }
-
                         } else {
                             Text(
                                 text = stringResource(R.string.sync_in_progress),
@@ -183,6 +178,7 @@ fun SyncScreen(
                         }
                     }
                 }
+                
                 Spacer(modifier = Modifier.height(32.dp))
 
                 val (autoSyncAnnotated, autoSyncInlineMap) = infoLabel(
@@ -248,9 +244,7 @@ fun SyncScreen(
                 ) {
                     Button(
                         onClick = {
-                            if (isFullScanning) syncViewModel.onStopFullScanButtonClicked() else syncViewModel.onStartFullScanButtonClicked(
-                                context
-                            )
+                            if (isFullScanning) syncViewModel.onStopFullScanButtonClicked() else syncViewModel.onStartFullScanButtonClicked(context)
                         },
                         enabled = true,
                         colors = ButtonDefaults.buttonColors(
@@ -326,7 +320,6 @@ fun SyncScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-
             }
         }
     }
