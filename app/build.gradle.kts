@@ -41,8 +41,8 @@ android {
         applicationId = "com.graphenelab.photosync"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.0.8"
+        versionCode = 12
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
