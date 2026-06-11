@@ -111,9 +111,7 @@ class FullScanService : Service() {
         try {
             val selectedFolderIds = syncRepository.selectedFolders.first()
             if (selectedFolderIds.isEmpty()) {
-                SyncStatusManager.updateSyncStatus(false)
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                finishSync()
                 return
             }
 
@@ -152,19 +150,21 @@ class FullScanService : Service() {
             }
 
             SyncStatusManager.updateSyncStatus(false)
-            SyncStatusManager.updateCurrentFolder(null)
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            finishSync()
 
         } catch (e: Exception) {
             // Re-throw CancellationException to propagate cancellation correctly.
             if (e is CancellationException) throw e
             Log.e(TAG, "Error in full scan logic", e)
-            SyncStatusManager.updateSyncStatus(false)
-            SyncStatusManager.updateCurrentFolder(null)
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            finishSync()
         }
+    }
+
+    private fun finishSync() {
+        SyncStatusManager.updateSyncStatus(false)
+        SyncStatusManager.updateCurrentFolder(null)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     /**

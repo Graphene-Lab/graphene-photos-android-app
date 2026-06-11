@@ -3,7 +3,6 @@ package com.graphenelab.photosync.manager
 import android.content.ContentResolver
 import android.util.Log
 import com.graphenelab.communication.crypto.IZeroKnowledgeProof
-import com.graphenelab.photosync.BuildConfig
 import com.graphenelab.photosync.common.PhotoSyncStatusManager
 import com.graphenelab.photosync.common.SyncStatusManager
 import com.graphenelab.photosync.common.UploadTimeouts
@@ -14,20 +13,24 @@ import com.graphenelab.photosync.domain.repositroy.IGalleryRepository
 import com.graphenelab.photosync.domain.repositroy.ISyncRepository
 import com.graphenelab.photosync.manager.interfaces.ICloudManager
 import com.graphenelab.photosync.manager.interfaces.IFullScanProcessManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.sync.Mutex
 import java.io.IOException
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
@@ -48,8 +51,17 @@ class FullScanProcessManager @Inject constructor(
 
     private val concurrentLimit = Semaphore(2) // Allow max N concurrent operations
 
+    private data class UploadOutcome(
+        val success: Boolean,
+        val errorMessage: String? = null
+    )
+
+    private data class PhotoSyncResult(
+        val timestamp: Long,
+        val success: Boolean
+    )
+
     override suspend fun initializeIntervals(bucketId: String): MutableList<TimeInterval> {
-        if (BuildConfig.DEBUG) syncIntervalRepository.clearSyncData()// TODO: Note - clears synced photos.
         val allIntervals = syncIntervalRepository.getSyncedIntervals(bucketId).first().toMutableList()
         // Ensure the initial 0-timestamp interval exists for complete coverage.
         if (allIntervals.none { it.start == 0L }) {
@@ -69,19 +81,33 @@ class FullScanProcessManager @Inject constructor(
             galleryRepository.getPhotosInInterval(interval1.end + 1, interval2.start - 1, bucketId)
 
         var tempInterval1 = interval1
+        val progressIntervals = currentIntervals.toMutableList()
+        val progressSaveMutex = Mutex()
         if (photosInGap.isNotEmpty()) {
             val onBatchSave: suspend (Long) -> Unit = { newEndTimestamp ->
-                tempInterval1 = interval1.copy(end = newEndTimestamp)
-                // Save current progress immediately for crash recovery.
-                val updatedListForSave = currentIntervals.toMutableList()
-                updatedListForSave[0] = tempInterval1
-                syncIntervalRepository.saveSyncedIntervals(bucketId, updatedListForSave)
+                progressSaveMutex.withLock {
+                    tempInterval1 = interval1.copy(end = newEndTimestamp)
+                    // Save current progress immediately for crash recovery.
+                    val updatedListForSave = currentIntervals.toMutableList()
+                    updatedListForSave[0] = tempInterval1
+                    progressIntervals.replaceWith(updatedListForSave)
+                    syncIntervalRepository.saveSyncedIntervals(bucketId, updatedListForSave)
+                }
+            }
+            val onPhotoSynced: suspend (Long) -> Unit = { syncedTimestamp ->
+                saveSyncedPhotoTimestamp(
+                    bucketId = bucketId,
+                    progressIntervals = progressIntervals,
+                    progressSaveMutex = progressSaveMutex,
+                    timestamp = syncedTimestamp
+                )
             }
             SyncStatusManager.increaseDiscoveredPhotosCount(photosInGap.size)
             syncAndSaveInBatches(
                 currentCoroutineContext,
                 photosInGap,
-                onBatchSave
+                onBatchSave,
+                onPhotoSynced
             )
         }
 
@@ -108,17 +134,31 @@ class FullScanProcessManager @Inject constructor(
         val photosInTail = galleryRepository.getPhotos(startTimeSeconds = finalInterval.end + 1, bucketId = bucketId)
 
         if (photosInTail.isNotEmpty()) {
+            val progressSaveMutex = Mutex()
             val onBatchSave: suspend (Long) -> Unit = { newEndTimestamp ->
-                val updatedInterval = finalInterval.copy(end = newEndTimestamp)
-                currentIntervals[0] = updatedInterval
-                syncIntervalRepository.saveSyncedIntervals(bucketId, currentIntervals)
+                progressSaveMutex.withLock {
+                    val updatedInterval = finalInterval.copy(end = newEndTimestamp)
+                    val updatedIntervals = currentIntervals.toMutableList()
+                    updatedIntervals[0] = updatedInterval
+                    currentIntervals.replaceWith(mergeIntervals(updatedIntervals))
+                    syncIntervalRepository.saveSyncedIntervals(bucketId, currentIntervals)
+                }
+            }
+            val onPhotoSynced: suspend (Long) -> Unit = { syncedTimestamp ->
+                saveSyncedPhotoTimestamp(
+                    bucketId = bucketId,
+                    progressIntervals = currentIntervals,
+                    progressSaveMutex = progressSaveMutex,
+                    timestamp = syncedTimestamp
+                )
             }
             SyncStatusManager.increaseDiscoveredPhotosCount(photosInTail.size)
 
             syncAndSaveInBatches(
                 currentCoroutineContext,
                 photosInTail,
-                onBatchSave
+                onBatchSave,
+                onPhotoSynced
             )
         }
         return currentIntervals
@@ -136,6 +176,7 @@ class FullScanProcessManager @Inject constructor(
         context: CoroutineContext,
         photos: List<GalleryPhoto>,
         onBatchSave: suspend (Long) -> Unit,
+        onPhotoSynced: suspend (Long) -> Unit,
     ) = withContext(Dispatchers.IO) {
         val batchSize = syncConfig.batchSize
         var lastSyncedTimestamp = 0L
@@ -186,26 +227,17 @@ class FullScanProcessManager @Inject constructor(
                                         photo.lastModifiedSeconds
                                     ) { progress ->
                                         if (progress.hasError) {
-                                            CoroutineScope(Dispatchers.Main).launch {
-                                                PhotoSyncStatusManager.updatePhotoProgress(
-                                                    filename = photo.displayName,
-                                                    currentChunk = progress.currentChunk,
-                                                    totalChunks = progress.totalChunks,
-                                                    hasError = true,
-                                                    errorMessage = progress.errorMessage ?: "Upload failed"
-                                                )
-                                                SyncStatusManager.incrementFailedSyncPhotosCount()
-                                            }
                                             if (finished.compareAndSet(false, true) && continuation.isActive) {
-                                                continuation.resume(Unit)
+                                                continuation.resume(
+                                                    UploadOutcome(
+                                                        success = false,
+                                                        errorMessage = progress.errorMessage ?: "Upload failed"
+                                                    )
+                                                )
                                             }
                                         } else if (progress.isCompleted) {
-                                            CoroutineScope(Dispatchers.Main).launch {
-                                                PhotoSyncStatusManager.markPhotoCompleted(photo.displayName)
-                                                SyncStatusManager.incrementSuccessfulSyncPhotosCount()
-                                            }
                                             if (finished.compareAndSet(false, true) && continuation.isActive) {
-                                                continuation.resume(Unit)
+                                                continuation.resume(UploadOutcome(success = true))
                                             }
                                         } else {
                                             CoroutineScope(Dispatchers.Main).launch {
@@ -220,19 +252,31 @@ class FullScanProcessManager @Inject constructor(
                                 }
                             }
 
-                            if (uploadCompleted == null) {
-                                CoroutineScope(Dispatchers.Main).launch {
+                            if (uploadCompleted?.success == true) {
+                                withContext(NonCancellable) {
+                                    onPhotoSynced(photo.dateAdded)
+                                    withContext(Dispatchers.Main) {
+                                        PhotoSyncStatusManager.markPhotoCompleted(photo.displayName)
+                                        SyncStatusManager.incrementSuccessfulSyncPhotosCount()
+                                    }
+                                }
+                                PhotoSyncResult(photo.dateAdded, success = true)
+                            } else {
+                                withContext(Dispatchers.Main) {
                                     PhotoSyncStatusManager.updatePhotoProgress(
                                         filename = photo.displayName,
                                         currentChunk = 0,
                                         totalChunks = 0,
                                         hasError = true,
-                                        errorMessage = "Upload timed out waiting for completion callback"
+                                        errorMessage = uploadCompleted?.errorMessage
+                                            ?: "Upload timed out waiting for completion callback"
                                     )
                                     SyncStatusManager.incrementFailedSyncPhotosCount()
                                 }
+                                PhotoSyncResult(photo.dateAdded, success = false)
                             }
-                            photo.dateAdded // Return timestamp for batch tracking
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Log.e("FullScanProcessManager", "Failed to sync ${photo.displayName}", e)
                             CoroutineScope(Dispatchers.Main).launch {
@@ -245,20 +289,55 @@ class FullScanProcessManager @Inject constructor(
                                 )
                                 SyncStatusManager.incrementFailedSyncPhotosCount()
                             }
-                            photo.dateAdded
+                            PhotoSyncResult(photo.dateAdded, success = false)
                         }
                     }
                 }
             }
 
             // Wait for all photos in the batch to complete
-            val timestamps = deferredResults.awaitAll()
-            lastSyncedTimestamp = timestamps.maxOrNull() ?: lastSyncedTimestamp
+            val syncedTimestamps = deferredResults.awaitAll()
+                .filter { it.success }
+                .map { it.timestamp }
 
             // Save batch progress
-            withContext(Dispatchers.Main) {
+            if (syncedTimestamps.isNotEmpty()) {
+                lastSyncedTimestamp = syncedTimestamps.maxOrNull() ?: lastSyncedTimestamp
                 onBatchSave(lastSyncedTimestamp)
             }
         }
+    }
+
+    private suspend fun saveSyncedPhotoTimestamp(
+        bucketId: String,
+        progressIntervals: MutableList<TimeInterval>,
+        progressSaveMutex: Mutex,
+        timestamp: Long
+    ) {
+        progressSaveMutex.withLock {
+            val updatedIntervals = mergeIntervals(progressIntervals + TimeInterval(timestamp, timestamp))
+            progressIntervals.replaceWith(updatedIntervals)
+            syncIntervalRepository.saveSyncedIntervals(bucketId, progressIntervals)
+        }
+    }
+
+    private fun mergeIntervals(intervals: List<TimeInterval>): MutableList<TimeInterval> {
+        if (intervals.isEmpty()) return mutableListOf()
+
+        val merged = mutableListOf<TimeInterval>()
+        intervals.sortedBy { it.start }.forEach { interval ->
+            val previous = merged.lastOrNull()
+            if (previous == null || interval.start > previous.end + 1) {
+                merged.add(interval)
+            } else {
+                merged[merged.lastIndex] = previous.copy(end = maxOf(previous.end, interval.end))
+            }
+        }
+        return merged
+    }
+
+    private fun MutableList<TimeInterval>.replaceWith(intervals: List<TimeInterval>) {
+        clear()
+        addAll(intervals)
     }
 }
