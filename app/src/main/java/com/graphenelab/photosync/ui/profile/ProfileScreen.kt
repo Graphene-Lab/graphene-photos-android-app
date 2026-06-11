@@ -1,16 +1,10 @@
 package com.graphenelab.photosync.ui.profile
 
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
-import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -36,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.graphenelab.photosync.R
+import com.graphenelab.photosync.ui.common.SyncedPhotosDeleteHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,56 +44,12 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Remember the URIs we're trying to delete so we can retry after permission granted
-    var pendingDeleteUris by remember { mutableStateOf<List<android.net.Uri>?>(null) }
-
-    // Launcher for delete permission request (Android 11+)
-    val deletePermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        Log.d("ProfileScreen", "Delete permission result: resultCode=${result.resultCode}, OK=${Activity.RESULT_OK}")
-        val granted = result.resultCode == Activity.RESULT_OK
-
-        if (granted && pendingDeleteUris != null) {
-            // Android 11+ - createDeleteRequest already deleted the files
-            val deletedCount = pendingDeleteUris!!.size
-            Log.d("ProfileScreen", "Permission granted, $deletedCount photos deleted (Android 11+)")
-            viewModel.onDeletePermissionResult(true, deletedCount)
-            pendingDeleteUris = null
-        } else {
-            Log.d("ProfileScreen", "Permission denied or no pending URIs")
-            viewModel.onDeletePermissionResult(false, 0)
-            pendingDeleteUris = null
-        }
-    }
-
-    // Handle photo URIs when they're set - create delete request in UI layer
-    LaunchedEffect(uiState.photoUrisToDelete) {
-        uiState.photoUrisToDelete?.let { photoUris ->
-            if (photoUris.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Store URIs for tracking
-                pendingDeleteUris = photoUris
-
-                // Android 11+ - Use MediaStore.createDeleteRequest (deletes files when granted)
-                try {
-                    Log.d("ProfileScreen", "Creating delete request for ${photoUris.size} photos (Android 11+)")
-                    val urisArrayList = ArrayList(photoUris)
-                    val pendingIntent = MediaStore.createDeleteRequest(context.contentResolver, urisArrayList)
-
-                    Log.d("ProfileScreen", "Successfully created PendingIntent, launching dialog")
-                    deletePermissionLauncher.launch(
-                        IntentSenderRequest.Builder(pendingIntent.intentSender).build()
-                    )
-
-                    viewModel.clearPhotoUrisToDelete()
-                } catch (e: Exception) {
-                    Log.e("ProfileScreen", "Failed to create delete request (Android 11+)", e)
-                    pendingDeleteUris = null
-                    viewModel.onDeletePermissionResult(false, 0)
-                }
-            }
-        }
-    }
+    SyncedPhotosDeleteHandler(
+        photoUrisToDelete = uiState.photoUrisToDelete,
+        onDeletePermissionResult = viewModel::onDeletePermissionResult,
+        onPhotoUrisToDeleteConsumed = viewModel::clearPhotoUrisToDelete,
+        logTag = "ProfileScreen"
+    )
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->

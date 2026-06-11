@@ -1,8 +1,10 @@
 package com.graphenelab.photosync.ui.sync
 
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,6 +12,7 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
@@ -29,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.graphenelab.photosync.R
+import com.graphenelab.photosync.ui.common.SyncedPhotosDeleteHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,11 +46,20 @@ fun SyncScreen(
     val context = LocalContext.current
     var showAutoSyncInfo by rememberSaveable { mutableStateOf(false) }
     var showFullScanInfo by rememberSaveable { mutableStateOf(false) }
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     val autoSyncInfo = stringResource(R.string.sync_auto_info)
     val fullScanInfo = stringResource(R.string.sync_manual_subtitle)
 
     val uiState by syncViewModel.uiState.collectAsState()
+
+    SyncedPhotosDeleteHandler(
+        photoUrisToDelete = uiState.photoUrisToDelete,
+        onDeletePermissionResult = syncViewModel::onDeletePermissionResult,
+        onPhotoUrisToDeleteConsumed = syncViewModel::clearPhotoUrisToDelete,
+        logTag = "SyncScreen"
+    )
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -239,6 +252,7 @@ fun SyncScreen(
                 )
 
                 val isFullScanning = uiState.isFullScanInProgress
+                val isStoppingFullScan = uiState.isStoppingFullScan
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -250,13 +264,13 @@ fun SyncScreen(
                         onClick = {
                             if (isFullScanning) syncViewModel.onStopFullScanButtonClicked() else syncViewModel.onStartFullScanButtonClicked(context)
                         },
-                        enabled = true,
+                        enabled = !isStoppingFullScan,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isFullScanning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier.weight(1f)
                     ) {
-                        if (isFullScanning) {
+                        if (isFullScanning || isStoppingFullScan) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
                                 color = LocalContentColor.current,
@@ -264,7 +278,11 @@ fun SyncScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = stringResource(R.string.sync_stop_full_scan),
+                                text = if (isStoppingFullScan) {
+                                    stringResource(R.string.sync_stopping_full_scan)
+                                } else {
+                                    stringResource(R.string.sync_stop_full_scan)
+                                },
                                 textAlign = TextAlign.Center
                             )
                         } else {
@@ -312,6 +330,109 @@ fun SyncScreen(
                     Text(
                         text = if (uiState.isExplorerInstalled) stringResource(R.string.sync_open_explorer) else stringResource(R.string.sync_download_explorer),
                         textAlign = TextAlign.Center
+                    )
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val canDeleteSyncedPhotos =
+                        !uiState.isDeletingSyncedPhotos && !isFullScanning && !isStoppingFullScan
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { showDeleteConfirmDialog = true },
+                        enabled = canDeleteSyncedPhotos,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = if (canDeleteSyncedPhotos) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.outline
+                            }
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .heightIn(min = 48.dp)
+                    ) {
+                        if (uiState.isDeletingSyncedPhotos) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = MaterialTheme.colorScheme.error,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.common_delete_cd),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = if (uiState.isDeletingSyncedPhotos) {
+                                stringResource(R.string.profile_deleting)
+                            } else {
+                                stringResource(R.string.sync_delete_synced_photos)
+                            },
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    uiState.deletedPhotosCount?.let { count ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (count > 0) {
+                                stringResource(R.string.profile_delete_success, count)
+                            } else {
+                                stringResource(R.string.profile_no_synced_photos)
+                            },
+                            color = if (count > 0) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    uiState.deleteError?.let { error ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.common_error_prefix, error),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                if (showDeleteConfirmDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDeleteConfirmDialog = false },
+                        title = { Text(stringResource(R.string.profile_delete_photos_dialog_title)) },
+                        text = {
+                            Text(stringResource(R.string.profile_delete_photos_dialog_body))
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showDeleteConfirmDialog = false
+                                    syncViewModel.deleteSyncedPhotos()
+                                },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text(stringResource(R.string.profile_delete_button))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                                Text(stringResource(R.string.profile_cancel_button))
+                            }
+                        }
                     )
                 }
 

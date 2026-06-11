@@ -34,10 +34,12 @@
     <string name="sync_manual_title">Полное сканирование</string>
     <string name="sync_manual_subtitle">Находит все фото, синхронизирует их с облаком (уже синхронизированные пропускаются)</string>
     <string name="sync_stop_full_scan">Остановить сканирование</string>
+    <string name="sync_stopping_full_scan">Остановка...</string>
     <string name="sync_start_full_scan">Начать сканирование</string>
     <string name="sync_auto_info">Работает периодически в фоновом режиме</string>
     <string name="sync_open_explorer">Открыть Проводник</string>
     <string name="sync_download_explorer">Скачать Проводник</string>
+    <string name="sync_delete_synced_photos">Удалить синхронизированные фото</string>
     <string name="sync_uploaded_photos_question">Хотите увидеть загруженные фото?</string>
     <string name="sync_choose_folder">Выбрать папку</string>
     <string name="sync_permission_denied">Вы отклонили предоставление разрешений. Пожалуйста, перейдите в настройки, чтобы их предоставить.</string>

@@ -34,10 +34,12 @@
     <string name="sync_manual_title">Full Scan</string>
     <string name="sync_manual_subtitle">Finds all photos, syncs them to the cloud (already synced ones are omitted)</string>
     <string name="sync_stop_full_scan">Stop Scan</string>
+    <string name="sync_stopping_full_scan">Stopping...</string>
     <string name="sync_start_full_scan">Start Scan</string>
     <string name="sync_auto_info">Runs periodically in the background</string>
     <string name="sync_open_explorer">Open Explorer</string>
     <string name="sync_download_explorer">Download Explorer</string>
+    <string name="sync_delete_synced_photos">Delete Synced Photos</string>
     <string name="sync_uploaded_photos_question">Want to see uploaded photos?</string>
     <string name="sync_choose_folder">Choose folder</string>
     <string name="sync_permission_denied">You denied granting permissions. Please go to settings to grant them.</string>

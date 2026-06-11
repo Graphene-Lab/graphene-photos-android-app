@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.graphenelab.photosync.common.AppStartupTrace
 import com.graphenelab.photosync.common.PhotoSyncStatusManager
 import com.graphenelab.photosync.common.SyncStatusManager
+import com.graphenelab.photosync.domain.usecase.GetSyncedPhotoUrisForDeletionUseCase
 import com.graphenelab.photosync.manager.PermissionSet
 import com.graphenelab.photosync.manager.interfaces.IBackgroundSyncManager
 import com.graphenelab.photosync.manager.interfaces.IExplorerAppManager
@@ -35,7 +36,8 @@ sealed class SyncEvent {
 class SyncViewModel @Inject constructor(
     private val backgroundSyncManager: IBackgroundSyncManager,
     private val permissionsManager: IPermissionsManager,
-    private val explorerAppManager: IExplorerAppManager
+    private val explorerAppManager: IExplorerAppManager,
+    private val getSyncedPhotoUrisForDeletion: GetSyncedPhotoUrisForDeletionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SyncUiState())
@@ -45,6 +47,10 @@ class SyncViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     private var screenStarted = false
+
+    companion object {
+        private const val TAG = "SyncViewModel"
+    }
 
     init {
         // Observe all sync-related flows and combine them into a single UI state update.
@@ -58,6 +64,7 @@ class SyncViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isFullScanInProgress = isSyncing,
+                    isStoppingFullScan = if (isSyncing) it.isStoppingFullScan else false,
                     folderMetrics = folderMetrics,
                     sessionMetrics = sessionMetrics,
                     currentFolderName = folderName,
@@ -102,12 +109,13 @@ class SyncViewModel @Inject constructor(
     }
 
     fun onStopFullScanButtonClicked() {
+        if (_uiState.value.isStoppingFullScan) return
+
         _uiState.update {
             it.copy(
-                isFullScanInProgress = false
+                isStoppingFullScan = true
             )
         }
-        SyncStatusManager.updateSyncStatus(false)
         stopFullScan()
     }
 
@@ -119,6 +127,7 @@ class SyncViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 permissionDenied = false,
+                isStoppingFullScan = false,
             )
         }
         backgroundSyncManager.startFullScanService()
@@ -150,6 +159,79 @@ class SyncViewModel @Inject constructor(
             explorerAppManager.openExplorerDownloadPage()
         }
         refreshExplorerInstallState()
+    }
+
+    fun deleteSyncedPhotos() {
+        if (
+            _uiState.value.isDeletingSyncedPhotos ||
+            _uiState.value.isFullScanInProgress ||
+            _uiState.value.isStoppingFullScan
+        ) return
+
+        viewModelScope.launch {
+            Log.d(TAG, "deleteSyncedPhotos: Starting deletion process")
+            _uiState.update {
+                it.copy(
+                    isDeletingSyncedPhotos = true,
+                    deleteError = null,
+                    deletedPhotosCount = null,
+                    photoUrisToDelete = null
+                )
+            }
+
+            try {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                    _uiState.update {
+                        it.copy(
+                            isDeletingSyncedPhotos = false,
+                            deleteError = "This feature requires Android 11 or higher"
+                        )
+                    }
+                    return@launch
+                }
+
+                val allPhotoUris = getSyncedPhotoUrisForDeletion()
+                if (allPhotoUris.isEmpty()) {
+                    _uiState.update {
+                        it.copy(
+                            isDeletingSyncedPhotos = false,
+                            deletedPhotosCount = 0,
+                            deleteError = null
+                        )
+                    }
+                    return@launch
+                }
+
+                _uiState.update {
+                    it.copy(
+                        isDeletingSyncedPhotos = false,
+                        photoUrisToDelete = allPhotoUris
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "deleteSyncedPhotos: Error during deletion", e)
+                _uiState.update {
+                    it.copy(
+                        isDeletingSyncedPhotos = false,
+                        deleteError = e.message ?: "Failed to delete synced photos"
+                    )
+                }
+            }
+        }
+    }
+
+    fun onDeletePermissionResult(granted: Boolean, photosCount: Int) {
+        _uiState.update {
+            it.copy(
+                photoUrisToDelete = null,
+                deletedPhotosCount = if (granted) photosCount else null,
+                deleteError = if (!granted) "Permission denied to delete photos" else null
+            )
+        }
+    }
+
+    fun clearPhotoUrisToDelete() {
+        _uiState.update { it.copy(photoUrisToDelete = null) }
     }
 
     fun setPermissionLauncher(launcher: ActivityResultLauncher<Array<String>>) {

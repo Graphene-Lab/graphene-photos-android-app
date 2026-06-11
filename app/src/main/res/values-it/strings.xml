@@ -34,10 +34,12 @@
     <string name="sync_manual_title">Scansione completa</string>
     <string name="sync_manual_subtitle">Trova tutte le foto, le sincronizza con il cloud (le foto già sincronizzate vengono omesse)</string>
     <string name="sync_stop_full_scan">Ferma scansione</string>
+    <string name="sync_stopping_full_scan">Arresto...</string>
     <string name="sync_start_full_scan">Avvia scansione</string>
     <string name="sync_auto_info">Viene eseguito periodicamente in background</string>
     <string name="sync_open_explorer">Apri Esplora risorse</string>
     <string name="sync_download_explorer">Scarica Esplora risorse</string>
+    <string name="sync_delete_synced_photos">Elimina foto sincronizzate</string>
     <string name="sync_uploaded_photos_question">Vuoi vedere le foto caricate?</string>
     <string name="sync_choose_folder">Scegli cartella</string>
     <string name="sync_permission_denied">Hai negato i permessi. Vai nelle impostazioni per concederli.</string>

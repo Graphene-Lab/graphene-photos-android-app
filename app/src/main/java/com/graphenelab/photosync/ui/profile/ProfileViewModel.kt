@@ -1,6 +1,5 @@
 package com.graphenelab.photosync.ui.profile
 
-import android.content.ContentResolver
 import android.os.Build
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -12,10 +11,10 @@ import com.graphenelab.photosync.domain.repositroy.DeleteAccountResult
 import com.graphenelab.photosync.domain.repositroy.IAppSettingsRepository
 import com.graphenelab.photosync.domain.repositroy.ICloudSpaceRepository
 import com.graphenelab.photosync.domain.repositroy.ICseMasterKeyRepository
-import com.graphenelab.photosync.domain.repositroy.IGalleryRepository
 import com.graphenelab.photosync.domain.repositroy.IOauthTokenRepository
 import com.graphenelab.photosync.domain.repositroy.ISessionRepository
 import com.graphenelab.photosync.domain.repositroy.ISyncRepository
+import com.graphenelab.photosync.domain.usecase.GetSyncedPhotoUrisForDeletionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,8 +35,7 @@ class ProfileViewModel @Inject constructor(
     private val sessionRepository: ISessionRepository,
     private val appSettingsRepository: IAppSettingsRepository,
     private val syncRepository: ISyncRepository,
-    private val galleryRepository: IGalleryRepository,
-    private val contentResolver: ContentResolver
+    private val getSyncedPhotoUrisForDeletion: GetSyncedPhotoUrisForDeletionUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -137,29 +134,7 @@ class ProfileViewModel @Inject constructor(
                     return@launch
                 }
 
-                val selectedFolders = syncRepository.selectedFolders.first()
-                if (selectedFolders.isEmpty()) {
-                    _uiState.update {
-                        it.copy(
-                            isDeletingSyncedPhotos = false,
-                            deletedPhotosCount = 0,
-                            deleteError = null
-                        )
-                    }
-                    return@launch
-                }
-
-                val allPhotoUris = mutableListOf<android.net.Uri>()
-
-                withContext(Dispatchers.IO) {
-                    for (bucketId in selectedFolders) {
-                        val intervals = syncRepository.getSyncedIntervals(bucketId).first()
-                        if (intervals.isNotEmpty()) {
-                            val uris = galleryRepository.getSyncedPhotosUris(intervals, bucketId)
-                            allPhotoUris.addAll(uris)
-                        }
-                    }
-                }
+                val allPhotoUris = getSyncedPhotoUrisForDeletion()
 
                 if (allPhotoUris.isEmpty()) {
                     _uiState.update {
