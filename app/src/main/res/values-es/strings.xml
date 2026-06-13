@@ -40,6 +40,11 @@
     <string name="sync_open_explorer">Abrir Explorador</string>
     <string name="sync_download_explorer">Descargar Explorador</string>
     <string name="sync_delete_synced_photos">Eliminar fotos sincronizadas</string>
+    <string name="sync_resync_from_scratch_link">¿Faltan fotos? Resincronizar desde cero</string>
+    <string name="sync_resync_from_scratch_dialog_title">¿Resincronizar desde cero?</string>
+    <string name="sync_resync_from_scratch_dialog_body">Si se eliminaron fotos de la nube, esto puede volver a subir las carpetas seleccionadas. La app borrará el historial local de sincronización de las carpetas seleccionadas y escaneará desde el principio. Puede tardar un tiempo.</string>
+    <string name="sync_resync_from_scratch_confirm">Resincronizar todo</string>
+    <string name="sync_resync_from_scratch_preparing">Preparando resincronización...</string>
     <string name="sync_uploaded_photos_question">¿Quieres ver las fotos subidas?</string>
     <string name="sync_choose_folder">Elegir carpeta</string>
     <string name="sync_permission_denied">Denegaste los permisos. Por favor, ve a la configuración para concederlos.</string>

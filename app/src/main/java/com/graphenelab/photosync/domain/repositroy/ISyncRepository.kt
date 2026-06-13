@@ -19,6 +19,11 @@ interface ISyncRepository {
     suspend fun saveSyncedIntervals(bucketId: String, intervals: List<TimeInterval>)
 
     /**
+     * Clears saved sync intervals only for the provided folders.
+     */
+    suspend fun clearSyncedIntervals(bucketIds: Set<String>)
+
+    /**
      * Retrieves the starting point for future "sync from now" operations.
      */
     val syncFromNowPoint: Flow<Long>

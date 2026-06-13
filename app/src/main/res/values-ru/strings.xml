@@ -40,6 +40,11 @@
     <string name="sync_open_explorer">Открыть Проводник</string>
     <string name="sync_download_explorer">Скачать Проводник</string>
     <string name="sync_delete_synced_photos">Удалить синхронизированные фото</string>
+    <string name="sync_resync_from_scratch_link">Не хватает фото? Синхронизировать заново</string>
+    <string name="sync_resync_from_scratch_dialog_title">Синхронизировать заново?</string>
+    <string name="sync_resync_from_scratch_dialog_body">Если фотографии были удалены из облака, это может снова загрузить выбранные папки. Приложение очистит локальную историю синхронизации для выбранных папок и начнет сканирование с начала. Это может занять некоторое время.</string>
+    <string name="sync_resync_from_scratch_confirm">Синхронизировать все</string>
+    <string name="sync_resync_from_scratch_preparing">Подготовка синхронизации...</string>
     <string name="sync_uploaded_photos_question">Хотите увидеть загруженные фото?</string>
     <string name="sync_choose_folder">Выбрать папку</string>
     <string name="sync_permission_denied">Вы отклонили предоставление разрешений. Пожалуйста, перейдите в настройки, чтобы их предоставить.</string>

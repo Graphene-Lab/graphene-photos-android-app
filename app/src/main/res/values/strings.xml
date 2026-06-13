@@ -40,6 +40,11 @@
     <string name="sync_open_explorer">Open Explorer</string>
     <string name="sync_download_explorer">Download Explorer</string>
     <string name="sync_delete_synced_photos">Delete Synced Photos</string>
+    <string name="sync_resync_from_scratch_link">Missing photos? Re-sync from scratch</string>
+    <string name="sync_resync_from_scratch_dialog_title">Re-sync from scratch?</string>
+    <string name="sync_resync_from_scratch_dialog_body">If photos were deleted from the cloud, this can upload your selected folders again. The app will clear local sync history for selected folders and scan from the beginning. This may take some time.</string>
+    <string name="sync_resync_from_scratch_confirm">Re-sync all</string>
+    <string name="sync_resync_from_scratch_preparing">Preparing re-sync...</string>
     <string name="sync_uploaded_photos_question">Want to see uploaded photos?</string>
     <string name="sync_choose_folder">Choose folder</string>
     <string name="sync_permission_denied">You denied granting permissions. Please go to settings to grant them.</string>

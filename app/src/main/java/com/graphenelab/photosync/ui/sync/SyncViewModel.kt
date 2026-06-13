@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.graphenelab.photosync.common.AppStartupTrace
 import com.graphenelab.photosync.common.PhotoSyncStatusManager
 import com.graphenelab.photosync.common.SyncStatusManager
+import com.graphenelab.photosync.domain.repositroy.ISyncRepository
 import com.graphenelab.photosync.domain.usecase.GetSyncedPhotoUrisForDeletionUseCase
 import com.graphenelab.photosync.manager.PermissionSet
 import com.graphenelab.photosync.manager.interfaces.IBackgroundSyncManager
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -37,6 +39,7 @@ class SyncViewModel @Inject constructor(
     private val backgroundSyncManager: IBackgroundSyncManager,
     private val permissionsManager: IPermissionsManager,
     private val explorerAppManager: IExplorerAppManager,
+    private val syncRepository: ISyncRepository,
     private val getSyncedPhotoUrisForDeletion: GetSyncedPhotoUrisForDeletionUseCase
 ) : ViewModel() {
 
@@ -47,6 +50,7 @@ class SyncViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     private var screenStarted = false
+    private var pendingResyncFromScratch = false
 
     companion object {
         private const val TAG = "SyncViewModel"
@@ -83,6 +87,12 @@ class SyncViewModel @Inject constructor(
         backgroundSyncManager.getPeriodicSyncWorkInfoFlow()
             .onEach { isScheduled ->
                 _uiState.update { it.copy(isBackgroundSyncScheduled = isScheduled) }
+            }
+            .launchIn(viewModelScope)
+
+        syncRepository.selectedFolders
+            .onEach { selectedFolders ->
+                _uiState.update { it.copy(hasSelectedFolders = selectedFolders.isNotEmpty()) }
             }
             .launchIn(viewModelScope)
     }
@@ -135,6 +145,63 @@ class SyncViewModel @Inject constructor(
 
     fun stopFullScan() {
         backgroundSyncManager.stopFullScanService()
+    }
+
+    fun onResyncClicked(context: Context) {
+        if (
+            _uiState.value.isPreparingResyncFromScratch ||
+            _uiState.value.isFullScanInProgress ||
+            _uiState.value.isStoppingFullScan ||
+            _uiState.value.isDeletingSyncedPhotos
+        ) return
+
+        if (!permissionsManager.hasPermissions(context, PermissionSet.SyncEssentials)) {
+            pendingResyncFromScratch = true
+            requestSyncPermissions()
+            return
+        }
+
+        resync()
+    }
+
+    private fun resync() {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isPreparingResyncFromScratch = true,
+                    resyncFromScratchError = null
+                )
+            }
+
+            try {
+                val selectedFolderIds = syncRepository.selectedFolders.first()
+                if (selectedFolderIds.isEmpty()) {
+                    _uiState.update {
+                        it.copy(
+                            isPreparingResyncFromScratch = false,
+                            resyncFromScratchError = "Choose at least one folder first"
+                        )
+                    }
+                    return@launch
+                }
+
+                clearSyncedIntervals(selectedFolderIds)
+                _uiState.update { it.copy(isPreparingResyncFromScratch = false) }
+                startFullScan()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to re-sync from scratch", e)
+                _uiState.update {
+                    it.copy(
+                        isPreparingResyncFromScratch = false,
+                        resyncFromScratchError = e.message ?: "Failed to re-sync from scratch"
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun clearSyncedIntervals(selectedFolderIds: Set<String>) {
+        syncRepository.clearSyncedIntervals(selectedFolderIds)
     }
 
     fun refreshExplorerInstallState() {
@@ -254,7 +321,10 @@ class SyncViewModel @Inject constructor(
                     || permissions.getOrDefault(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED, false)
 
             if (hasMediaPermission) {
-                if (_uiState.value.startFullScanButtonClicked) {
+                if (pendingResyncFromScratch) {
+                    pendingResyncFromScratch = false
+                    resync()
+                } else if (_uiState.value.startFullScanButtonClicked) {
                     viewModelScope.launch {
                         _events.send(SyncEvent.NavigateToScanSetup)
                     }
@@ -269,11 +339,15 @@ class SyncViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(permissionDenied = true)
                 }
+                pendingResyncFromScratch = false
             }
         } else {
             if (permissions.getOrDefault(Manifest.permission.READ_EXTERNAL_STORAGE, false)) {
                 Log.d("SyncViewModel", "Permission granted")
-                if (_uiState.value.startFullScanButtonClicked) {
+                if (pendingResyncFromScratch) {
+                    pendingResyncFromScratch = false
+                    resync()
+                } else if (_uiState.value.startFullScanButtonClicked) {
                     viewModelScope.launch {
                         _events.send(SyncEvent.NavigateToScanSetup)
                     }
@@ -284,6 +358,7 @@ class SyncViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(permissionDenied = true)
                 }
+                pendingResyncFromScratch = false
             }
         }
     }

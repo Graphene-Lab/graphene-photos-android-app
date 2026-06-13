@@ -49,6 +49,26 @@ class SyncPreferencesDataSource @Inject constructor(
         }
     }
 
+    suspend fun clearSyncedIntervals(bucketIds: Set<String>) {
+        if (bucketIds.isEmpty()) return
+
+        context.dataStore.edit { prefs ->
+            val currentMap = try {
+                Json.decodeFromString<Map<String, List<TimeInterval>>>(prefs[FOLDER_SYNC_INTERVALS_KEY] ?: "{}").toMutableMap()
+            } catch (e: Exception) {
+                mutableMapOf()
+            }
+
+            bucketIds.forEach { currentMap.remove(it) }
+
+            if (currentMap.isEmpty()) {
+                prefs.remove(FOLDER_SYNC_INTERVALS_KEY)
+            } else {
+                prefs[FOLDER_SYNC_INTERVALS_KEY] = Json.encodeToString(currentMap)
+            }
+        }
+    }
+
     val syncFromNowPoint: Flow<Long> =
     context.dataStore.data.map { it[SYNC_FROM_NOW_POINT_KEY] ?: 0L }
 

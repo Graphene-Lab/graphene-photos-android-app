@@ -18,8 +18,11 @@ data class SyncUiState(
     val syncFromNowButtonClicked: Boolean = false,
     val isExplorerInstalled: Boolean = false,
     val currentFolderName: String? = null,
+    val hasSelectedFolders: Boolean = false,
     val isDeletingSyncedPhotos: Boolean = false,
     val deletedPhotosCount: Int? = null,
     val deleteError: String? = null,
-    val photoUrisToDelete: List<Uri>? = null
+    val photoUrisToDelete: List<Uri>? = null,
+    val isPreparingResyncFromScratch: Boolean = false,
+    val resyncFromScratchError: String? = null
 )

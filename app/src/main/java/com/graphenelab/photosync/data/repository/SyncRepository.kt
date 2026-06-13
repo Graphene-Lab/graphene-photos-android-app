@@ -18,6 +18,10 @@ class SyncRepositoryImpl @Inject constructor(
         prefs.saveSyncedIntervals(bucketId, intervals)
     }
 
+    override suspend fun clearSyncedIntervals(bucketIds: Set<String>) {
+        prefs.clearSyncedIntervals(bucketIds)
+    }
+
     override val syncFromNowPoint = prefs.syncFromNowPoint
 
     override suspend fun saveSyncFromNowPoint(timestamp: Long) {

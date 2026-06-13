@@ -28,6 +28,7 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -47,6 +48,7 @@ fun SyncScreen(
     var showAutoSyncInfo by rememberSaveable { mutableStateOf(false) }
     var showFullScanInfo by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
+    var showResyncFromScratchDialog by rememberSaveable { mutableStateOf(false) }
 
     val autoSyncInfo = stringResource(R.string.sync_auto_info)
     val fullScanInfo = stringResource(R.string.sync_manual_subtitle)
@@ -132,6 +134,10 @@ fun SyncScreen(
                                         text = stringResource(R.string.sync_no_photos),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.secondary
+                                    )
+                                    ResyncFromScratchPrompt(
+                                        uiState = uiState,
+                                        onClick = { showResyncFromScratchDialog = true }
                                     )
                                 } else {
                                     Text(
@@ -436,6 +442,31 @@ fun SyncScreen(
                     )
                 }
 
+                if (showResyncFromScratchDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showResyncFromScratchDialog = false },
+                        title = { Text(stringResource(R.string.sync_resync_from_scratch_dialog_title)) },
+                        text = {
+                            Text(stringResource(R.string.sync_resync_from_scratch_dialog_body))
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showResyncFromScratchDialog = false
+                                    syncViewModel.onResyncClicked(context)
+                                }
+                            ) {
+                                Text(stringResource(R.string.sync_resync_from_scratch_confirm))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showResyncFromScratchDialog = false }) {
+                                Text(stringResource(R.string.profile_cancel_button))
+                            }
+                        }
+                    )
+                }
+
                 if (uiState.permissionDenied) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
                     Text(
@@ -447,6 +478,50 @@ fun SyncScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ResyncFromScratchPrompt(
+    uiState: SyncUiState,
+    onClick: () -> Unit
+) {
+    val canResyncFromScratch =
+        uiState.hasSelectedFolders &&
+            !uiState.isStoppingFullScan &&
+            !uiState.isDeletingSyncedPhotos &&
+            !uiState.isPreparingResyncFromScratch
+
+    when {
+        uiState.isPreparingResyncFromScratch -> {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.sync_resync_from_scratch_preparing),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        canResyncFromScratch -> {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.sync_resync_from_scratch_link),
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.primary,
+                    textDecoration = TextDecoration.Underline
+                ),
+                modifier = Modifier.clickable(onClick = onClick)
+            )
+        }
+    }
+
+    uiState.resyncFromScratchError?.let { error ->
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.common_error_prefix, error),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 

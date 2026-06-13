@@ -40,6 +40,11 @@
     <string name="sync_open_explorer">Ouvrir l\'Explorateur</string>
     <string name="sync_download_explorer">Télécharger l\'Explorateur</string>
     <string name="sync_delete_synced_photos">Supprimer les photos synchronisées</string>
+    <string name="sync_resync_from_scratch_link">Photos manquantes ? Resynchroniser depuis le début</string>
+    <string name="sync_resync_from_scratch_dialog_title">Resynchroniser depuis le début ?</string>
+    <string name="sync_resync_from_scratch_dialog_body">Si des photos ont été supprimées du cloud, cela peut téléverser à nouveau les dossiers sélectionnés. L\'application effacera l\'historique local de synchronisation des dossiers sélectionnés et analysera depuis le début. Cela peut prendre du temps.</string>
+    <string name="sync_resync_from_scratch_confirm">Tout resynchroniser</string>
+    <string name="sync_resync_from_scratch_preparing">Préparation de la resynchronisation...</string>
     <string name="sync_uploaded_photos_question">Voulez-vous voir les photos téléchargées ?</string>
     <string name="sync_choose_folder">Choisir le dossier</string>
     <string name="sync_permission_denied">Vous avez refusé les autorisations. Veuillez accéder aux paramètres pour les accorder.</string>
