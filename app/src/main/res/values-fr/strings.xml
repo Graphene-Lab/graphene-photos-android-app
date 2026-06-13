@@ -18,15 +18,15 @@
     <!-- Sync Screen -->
     <string name="sync_title">Synchronisation de la galerie</string>
     <string name="sync_settings_cd">Paramètres</string>
-    <string name="sync_status_label">Statut :</string>
+    <string name="sync_status_label">Statut</string>
     <string name="sync_success">Synchronisation réussie, %1$d photos téléchargées</string>
     <string name="sync_no_photos">Aucune photo à synchroniser. Tout est à jour.</string>
     <string name="sync_ready">Prêt à synchroniser</string>
     <string name="sync_in_progress">Synchronisation en cours</string>
-    <string name="sync_uploaded_photos">Photos téléchargées :</string>
-    <string name="sync_failed_photos">Photos échouées :</string>
-    <string name="sync_discovered_photos">Photos découvertes :</string>
-    <string name="sync_progress_info">Informations sur la progression :</string>
+    <string name="sync_uploaded_photos">Photos téléchargées</string>
+    <string name="sync_failed_photos">Photos échouées</string>
+    <string name="sync_discovered_photos">Photos découvertes</string>
+    <string name="sync_progress_info">Informations sur la progression</string>
     <string name="sync_progress_waiting">en attente…</string>
     <string name="sync_scanning_folder">Analyse du dossier : %1$s</string>
     <string name="sync_auto_label">Synchroniser automatiquement les nouvelles photos</string>

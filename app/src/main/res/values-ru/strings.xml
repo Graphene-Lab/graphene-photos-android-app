@@ -18,15 +18,15 @@
     <!-- Sync Screen -->
     <string name="sync_title">Синхронизация галереи</string>
     <string name="sync_settings_cd">Настройки</string>
-    <string name="sync_status_label">Статус:</string>
+    <string name="sync_status_label">Статус</string>
     <string name="sync_success">Синхронизация завершена, загружено %1$d фото</string>
     <string name="sync_no_photos">Нет фото для синхронизации. Всё актуально.</string>
     <string name="sync_ready">Готово к синхронизации</string>
     <string name="sync_in_progress">Синхронизация в процессе</string>
-    <string name="sync_uploaded_photos">Загружено фото:</string>
-    <string name="sync_failed_photos">Ошибки загрузки:</string>
-    <string name="sync_discovered_photos">Обнаружено фото:</string>
-    <string name="sync_progress_info">Информация о прогрессе:</string>
+    <string name="sync_uploaded_photos">Загружено фото</string>
+    <string name="sync_failed_photos">Ошибки загрузки</string>
+    <string name="sync_discovered_photos">Обнаружено фото</string>
+    <string name="sync_progress_info">Информация о прогрессе</string>
     <string name="sync_progress_waiting">ожидание…</string>
     <string name="sync_scanning_folder">Сканирование папки: %1$s</string>
     <string name="sync_auto_label">Автоматически синхронизировать новые фото</string>

@@ -112,7 +112,10 @@ fun SyncScreen(
             ) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text(text = stringResource(R.string.sync_status_label), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = "${stringResource(R.string.sync_status_label)}:",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                         
                         if (!uiState.isFullScanInProgress) {
                             if (uiState.sessionMetrics.successful > 0 || uiState.sessionMetrics.failed > 0) {
@@ -123,7 +126,7 @@ fun SyncScreen(
                                 )
                                 if (uiState.sessionMetrics.failed > 0) {
                                     Text(
-                                        text = stringResource(R.string.sync_failed_photos) + ": " + uiState.sessionMetrics.failed,
+                                        text = "${stringResource(R.string.sync_failed_photos)}: ${uiState.sessionMetrics.failed}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.error
                                     )
@@ -163,7 +166,7 @@ fun SyncScreen(
                             }
                             Row {
                                 Text(
-                                    text = stringResource(R.string.sync_uploaded_photos),
+                                    text = "${stringResource(R.string.sync_uploaded_photos)}:",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
@@ -173,7 +176,7 @@ fun SyncScreen(
                             }
                             Row {
                                 Text(
-                                    text = stringResource(R.string.sync_failed_photos),
+                                    text = "${stringResource(R.string.sync_failed_photos)}:",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
@@ -183,7 +186,7 @@ fun SyncScreen(
                             }
                             Row {
                                 Text(
-                                    text = stringResource(R.string.sync_discovered_photos),
+                                    text = "${stringResource(R.string.sync_discovered_photos)}:",
                                     style = MaterialTheme.typography.titleMedium,
                                 )
                                 Text(
@@ -193,7 +196,7 @@ fun SyncScreen(
                             }
 
                             Column {
-                                Text(text = stringResource(R.string.sync_progress_info))
+                                Text(text = "${stringResource(R.string.sync_progress_info)}:")
                                 Text(text = uiState.progress?.let { progress ->
                                     "${progress.filename} ${progress.currentChunk}/${progress.totalChunks}"
                                 } ?: stringResource(R.string.sync_progress_waiting))
