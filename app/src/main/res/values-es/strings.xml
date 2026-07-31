@@ -14,6 +14,7 @@
     <string name="login_privacy_body">Las fotos se cifran en tu dispositivo antes de ser subidas. Tus claves de cifrado permanecen en tu teléfono y nunca se envían a nuestros servidores. Solo almacenamos archivos cifrados, por lo que no podemos ver tus fotos, a diferencia de servicios como Google Fotos o OneDrive.</string>
     <string name="login_error_title">¡Vaya! Algo salió mal</string>
     <string name="login_try_again">Intentar de nuevo</string>
+    <string name="login_explore_graphene_cloud">Descubre Graphene Cloud</string>
 
     <!-- Sync Screen -->
     <string name="sync_title">Sincronización de galería</string>
@@ -21,6 +22,7 @@
     <string name="sync_status_label">Estado</string>
     <string name="sync_success">Sincronización exitosa, %1$d fotos subidas</string>
     <string name="sync_no_photos">No hay fotos que sincronizar. Todo está actualizado.</string>
+    <string name="sync_complete_dialog_body">Sincronización terminada. %1$d sincronizadas.</string>
     <string name="sync_ready">Listo para sincronizar</string>
     <string name="sync_in_progress">Sincronización en curso</string>
     <string name="sync_uploaded_photos">Fotos subidas</string>
@@ -179,6 +181,11 @@
     <string name="common_ok">Aceptar</string>
     <string name="common_error_prefix">Error: %1$s</string>
     <string name="common_delete_cd">Eliminar</string>
+    <string name="common_support_question">¿Tienes más preguntas?</string>
+    <string name="common_visit_graphene_cloud">Visita Graphene Cloud</string>
+    <string name="common_send_feedback">Enviar comentarios</string>
+    <string name="feedback_email_subject">Comentarios sobre Graphene Photos</string>
+    <string name="feedback_no_email_app">No se encontró ninguna aplicación de correo</string>
 
     <!-- Folders Screen -->
     <string name="folders_title">Elegir carpetas</string>

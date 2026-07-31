@@ -14,6 +14,7 @@
     <string name="login_privacy_body">Фотографии шифруются на вашем устройстве перед загрузкой. Ключи шифрования остаются на вашем телефоне и никогда не передаются на наши серверы. Мы храним только зашифрованные файлы, поэтому не можем просматривать ваши фото — в отличие от таких сервисов, как Google Фото или OneDrive.</string>
     <string name="login_error_title">Упс! Что-то пошло не так</string>
     <string name="login_try_again">Попробовать снова</string>
+    <string name="login_explore_graphene_cloud">Узнать больше о Graphene Cloud</string>
 
     <!-- Sync Screen -->
     <string name="sync_title">Синхронизация галереи</string>
@@ -21,6 +22,7 @@
     <string name="sync_status_label">Статус</string>
     <string name="sync_success">Синхронизация завершена, загружено %1$d фото</string>
     <string name="sync_no_photos">Нет фото для синхронизации. Всё актуально.</string>
+    <string name="sync_complete_dialog_body">Синхронизация завершена. Синхронизировано: %1$d.</string>
     <string name="sync_ready">Готово к синхронизации</string>
     <string name="sync_in_progress">Синхронизация в процессе</string>
     <string name="sync_uploaded_photos">Загружено фото</string>
@@ -179,6 +181,11 @@
     <string name="common_ok">ОК</string>
     <string name="common_error_prefix">Ошибка: %1$s</string>
     <string name="common_delete_cd">Удалить</string>
+    <string name="common_support_question">Остались вопросы?</string>
+    <string name="common_visit_graphene_cloud">Перейти на сайт Graphene Cloud</string>
+    <string name="common_send_feedback">Отправить отзыв</string>
+    <string name="feedback_email_subject">Отзыв о Graphene Photos</string>
+    <string name="feedback_no_email_app">Почтовое приложение не найдено</string>
 
     <!-- Folders Screen -->
     <string name="folders_title">Выбрать папки</string>

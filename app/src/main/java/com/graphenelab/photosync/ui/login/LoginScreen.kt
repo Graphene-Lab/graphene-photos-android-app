@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.graphenelab.photosync.R
 import com.graphenelab.photosync.BuildConfig
+import com.graphenelab.photosync.ui.common.GrapheneCloudLink
 
 private const val TAG = "LoginScreen"
 
@@ -100,56 +102,70 @@ fun LoginScreen(
                 is LoginUiState.Unauthenticated -> {
                     Column(
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = stringResource(R.string.login_title),
-                            style = MaterialTheme.typography.headlineMedium,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = stringResource(R.string.login_subtitle),
+                                text = stringResource(R.string.login_title),
+                                style = MaterialTheme.typography.headlineMedium,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.login_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                            TextButton(onClick = { showPrivacyInfo = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.login_learn_more))
+                            }
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Button(onClick = {
+                                if (BuildConfig.DEBUG) {
+                                    Log.d(TAG, "Sign in button clicked, launching auth intent")
+                                }
+                                val authIntent = viewModel.getAuthIntent()
+                                authLauncher.launch(authIntent)
+                            }) {
+                                Text(stringResource(R.string.login_sign_in_email))
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = stringResource(R.string.login_have_desktop),
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center
                             )
-                        }
-                        TextButton(onClick = { showPrivacyInfo = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.login_learn_more))
-                        }
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Button(onClick = {
-                            if (BuildConfig.DEBUG) {
-                                Log.d(TAG, "Sign in button clicked, launching auth intent")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(onClick = onNavigateToScan) {
+                                Text(stringResource(R.string.login_connect_qr))
                             }
-                            val authIntent = viewModel.getAuthIntent()
-                            authLauncher.launch(authIntent)
-                        }) {
-                            Text(stringResource(R.string.login_sign_in_email))
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.login_have_desktop),
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center
+
+                        GrapheneCloudLink(
+                            label = stringResource(R.string.login_explore_graphene_cloud),
+                            modifier = Modifier
+                                .navigationBarsPadding()
+                                .padding(bottom = 12.dp)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = onNavigateToScan) {
-                            Text(stringResource(R.string.login_connect_qr))
-                        }
 
                         if (showPrivacyInfo) {
                             AlertDialog(

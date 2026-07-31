@@ -14,6 +14,7 @@
     <string name="login_privacy_body">Le foto vengono crittografate sul tuo dispositivo prima del caricamento. Le chiavi di crittografia rimangono sul tuo telefono e non vengono mai inviate ai nostri server. Conserviamo solo file crittografati, quindi non possiamo vedere le tue foto, a differenza di servizi come Google Foto o OneDrive.</string>
     <string name="login_error_title">Ops! Qualcosa è andato storto</string>
     <string name="login_try_again">Riprova</string>
+    <string name="login_explore_graphene_cloud">Scopri Graphene Cloud</string>
 
     <!-- Sync Screen -->
     <string name="sync_title">Sincronizzazione galleria</string>
@@ -21,6 +22,7 @@
     <string name="sync_status_label">Stato</string>
     <string name="sync_success">Sincronizzazione riuscita, %1$d foto caricate</string>
     <string name="sync_no_photos">Nessuna foto da sincronizzare. Tutto è aggiornato.</string>
+    <string name="sync_complete_dialog_body">Sincronizzazione terminata. %1$d sincronizzate.</string>
     <string name="sync_ready">Pronto per la sincronizzazione</string>
     <string name="sync_in_progress">Sincronizzazione in corso</string>
     <string name="sync_uploaded_photos">Foto caricate</string>
@@ -179,6 +181,11 @@
     <string name="common_ok">OK</string>
     <string name="common_error_prefix">Errore: %1$s</string>
     <string name="common_delete_cd">Elimina</string>
+    <string name="common_support_question">Hai altre domande?</string>
+    <string name="common_visit_graphene_cloud">Visita Graphene Cloud</string>
+    <string name="common_send_feedback">Invia feedback</string>
+    <string name="feedback_email_subject">Feedback su Graphene Photos</string>
+    <string name="feedback_no_email_app">Nessuna app e-mail trovata</string>
 
     <!-- Folders Screen -->
     <string name="folders_title">Scegli cartelle</string>

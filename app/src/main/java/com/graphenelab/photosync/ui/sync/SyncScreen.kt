@@ -49,6 +49,10 @@ fun SyncScreen(
     var showFullScanInfo by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
     var showResyncFromScratchDialog by rememberSaveable { mutableStateOf(false) }
+    var showSyncCompleteDialog by rememberSaveable { mutableStateOf(false) }
+    var syncCompleteSuccessful by rememberSaveable { mutableStateOf(0) }
+    var wasFullScanInProgress by rememberSaveable { mutableStateOf(false) }
+    var stopRequestedDuringFullScan by rememberSaveable { mutableStateOf(false) }
 
     val autoSyncInfo = stringResource(R.string.sync_auto_info)
     val fullScanInfo = stringResource(R.string.sync_manual_subtitle)
@@ -81,6 +85,33 @@ fun SyncScreen(
             when (event) {
                 is SyncEvent.NavigateToScanSetup -> onNavigateToScanSetup()
             }
+        }
+    }
+
+    LaunchedEffect(
+        uiState.isFullScanInProgress,
+        uiState.isStoppingFullScan,
+        uiState.sessionMetrics
+    ) {
+        if (uiState.isFullScanInProgress) {
+            wasFullScanInProgress = true
+            if (uiState.isStoppingFullScan) {
+                stopRequestedDuringFullScan = true
+            }
+        } else if (wasFullScanInProgress) {
+            wasFullScanInProgress = false
+
+            val metrics = uiState.sessionMetrics
+            val hasCompletionResult = metrics.processed > 0 ||
+                metrics.discovered > 0 ||
+                metrics.noPhotosFoundToSync
+
+            if (!stopRequestedDuringFullScan && hasCompletionResult) {
+                syncCompleteSuccessful = metrics.successful
+                showSyncCompleteDialog = true
+            }
+
+            stopRequestedDuringFullScan = false
         }
     }
 
@@ -470,6 +501,13 @@ fun SyncScreen(
                     )
                 }
 
+                if (showSyncCompleteDialog) {
+                    SyncCompleteDialog(
+                        successful = syncCompleteSuccessful,
+                        onDismiss = { showSyncCompleteDialog = false }
+                    )
+                }
+
                 if (uiState.permissionDenied) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
                     Text(
@@ -482,6 +520,24 @@ fun SyncScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SyncCompleteDialog(
+    successful: Int,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        text = {
+            Text(stringResource(R.string.sync_complete_dialog_body, successful))
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_ok))
+            }
+        }
+    )
 }
 
 @Composable

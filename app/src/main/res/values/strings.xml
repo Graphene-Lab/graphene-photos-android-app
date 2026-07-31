@@ -14,6 +14,7 @@
     <string name="login_privacy_body">Photos are encrypted on your device before upload. Your encryption keys stay on your phone and are never sent to our servers. We store only encrypted files, so we cannot view your photos, unlike typical services such as Google Photos or OneDrive.</string>
     <string name="login_error_title">Oops! Something went wrong</string>
     <string name="login_try_again">Try Again</string>
+    <string name="login_explore_graphene_cloud">Explore Graphene Cloud</string>
 
     <!-- Sync Screen -->
     <string name="sync_title">Gallery Sync</string>
@@ -21,6 +22,7 @@
     <string name="sync_status_label">Status</string>
     <string name="sync_success">Sync Successful, %1$d photos uploaded</string>
     <string name="sync_no_photos">No photos to sync. Everything is up to date.</string>
+    <string name="sync_complete_dialog_body">Sync finished. %1$d synced.</string>
     <string name="sync_ready">Ready to Sync</string>
     <string name="sync_in_progress">Sync in Progress</string>
     <string name="sync_uploaded_photos">Uploaded Photos</string>
@@ -174,11 +176,18 @@
     <string name="profile_delete_permanently">Delete Permanently</string>
     <string name="profile_logout">Logout</string>
     <string name="profile_copied_clipboard">%1$s copied to clipboard!</string>
+    <string name="graphene_cloud_url" translatable="false">https://graphenelab.it/cloud</string>
+    <string name="feedback_email_address" translatable="false">contact@graphenelab.cloud</string>
 
     <!-- Common -->
     <string name="common_ok">OK</string>
     <string name="common_error_prefix">Error: %1$s</string>
     <string name="common_delete_cd">Delete</string>
+    <string name="common_support_question">Have more questions?</string>
+    <string name="common_visit_graphene_cloud">Visit Graphene Cloud</string>
+    <string name="common_send_feedback">Send feedback</string>
+    <string name="feedback_email_subject">Graphene Photos feedback</string>
+    <string name="feedback_no_email_app">No email app found</string>
 
     <!-- Folders Screen -->
     <string name="folders_title">Choose Folders</string>

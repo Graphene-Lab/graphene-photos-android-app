@@ -1,8 +1,11 @@
 package com.graphenelab.photosync.ui.profile
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -11,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -30,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.graphenelab.photosync.R
+import com.graphenelab.photosync.ui.common.GrapheneCloudLink
 import com.graphenelab.photosync.ui.common.SyncedPhotosDeleteHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -428,6 +433,10 @@ fun ProfileScreen(
                 }
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SupportSection()
+
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
@@ -545,6 +554,60 @@ internal fun DangerZoneSection(
     }
 }
 
+@Composable
+internal fun SupportSection() {
+    val context = LocalContext.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            GrapheneCloudLink(
+                prompt = stringResource(R.string.common_support_question),
+                label = stringResource(R.string.common_visit_graphene_cloud)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = { openFeedbackEmail(context) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Email, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.common_send_feedback))
+            }
+        }
+    }
+}
+
+private fun openFeedbackEmail(context: Context) {
+    val feedbackEmail = context.getString(R.string.feedback_email_address)
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = Uri.fromParts("mailto", feedbackEmail, null)
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(feedbackEmail))
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.feedback_email_subject))
+    }
+
+    try {
+        context.startActivity(
+            Intent.createChooser(
+                intent,
+                context.getString(R.string.common_send_feedback)
+            )
+        )
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            context.getString(R.string.feedback_no_email_app),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
 
 @Preview
 @Composable
