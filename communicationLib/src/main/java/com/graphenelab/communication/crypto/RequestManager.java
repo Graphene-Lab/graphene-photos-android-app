@@ -111,12 +111,20 @@ public class RequestManager {
             if (nextRequest != null) {
                 concurrentRequest.incrementAndGet();
                 logConcurrencyState("dispatch", nextRequest.getFirst());
-                executeRequest(nextRequest.getFirst(), nextRequest.getSecond());
+                executeQueuedRequest(nextRequest.getFirst(), nextRequest.getSecond());
             }
         }
     }
 
+    /**
+     * Queues a request for dispatch. Keeping this as the only public entry point makes sure the
+     * concurrency counter is incremented before the request can complete and decrement it.
+     */
     public static void executeRequest(Integer commandId, byte[] data) {
+        enqueueRequest(commandId, data);
+    }
+
+    private static void executeQueuedRequest(Integer commandId, byte[] data) {
         if (commandId == null) {
             alertBox("Command does not exist");
             requestDone("null-command");
@@ -295,9 +303,11 @@ public class RequestManager {
     }
 
     private static synchronized void requestDone(String reason) {
-        int current = concurrentRequest.decrementAndGet();
-        if (current < 0) {
-            System.out.println("[RequestManager][Concurrency] WARNING: concurrentRequest is negative (" + current + ")");
+        int current = concurrentRequest.get();
+        if (current == 0) {
+            System.out.println("[RequestManager][Concurrency] WARNING: request completed without an active queue slot");
+        } else {
+            current = concurrentRequest.decrementAndGet();
         }
         logConcurrencyState("requestDone:" + reason, null);
         tryStartNext();
@@ -452,16 +462,12 @@ public class RequestManager {
                 }
             }
 
-            // Reset concurrent request counter since we're stopping everything
-            concurrentRequest.set(0);
-
-            System.out.println("All upload requests cancelled successfully");
+            System.out.println("All upload requests cancelled successfully; waiting for active calls to finish cancellation");
 
         } catch (InterruptedException e) {
             // Current thread was interrupted, re-interrupt and force shutdown
             Thread.currentThread().interrupt();
             executor.shutdownNow();
-            concurrentRequest.set(0);
             System.err.println("Cancellation was interrupted, forced shutdown");
         }
 
@@ -470,7 +476,6 @@ public class RequestManager {
                 call.cancel();
             }
         }
-        activeCalls.clear();
     }
 
     private static synchronized void recreateExecutor() {
