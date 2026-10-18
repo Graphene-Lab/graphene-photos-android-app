@@ -21,8 +21,8 @@ class OAuthManager @Inject constructor(
 ) : IOAuthManager {
     private val authService = AuthorizationService(context)
     private val serviceConfig = AuthorizationServiceConfiguration(
-        "https://cloudkeycloak.duckdns.org/realms/cloud/protocol/openid-connect/auth".toUri(),
-        "https://cloudkeycloak.duckdns.org/realms/cloud/protocol/openid-connect/token".toUri()
+        "https://id.graphenelab.cloud/realms/cloud/protocol/openid-connect/auth".toUri(),
+        "https://id.graphenelab.cloud/realms/cloud/protocol/openid-connect/token".toUri()
     )
 
     companion object {
