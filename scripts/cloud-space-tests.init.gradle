@@ -1,0 +1,7 @@
+// Temporary focused entry point while these three pre-existing test files do not compile.
+// Normal Gradle test tasks retain every test source; only --init-script opts into this exclusion.
+gradle.projectsEvaluated {
+    gradle.rootProject.project(':app').tasks.named('compileDebugUnitTestKotlin') {
+        exclude('**/FullScanServiceTest.kt', '**/PhotoSyncWorkerTest.kt', '**/FullScanProcessManagerTest.kt')
+    }
+}
