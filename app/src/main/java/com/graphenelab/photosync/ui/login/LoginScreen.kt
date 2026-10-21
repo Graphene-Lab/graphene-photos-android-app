@@ -83,8 +83,13 @@ fun LoginScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            when (uiState) {
-                is LoginUiState.Loading -> {
+            when (val state = uiState) {
+                LoginUiState.ObtainingIamTokens,
+                LoginUiState.CheckingCloudSpaceInitializationState,
+                LoginUiState.FetchingCloudPairingCredentials,
+                LoginUiState.RequestingCloudSpaceInitialization,
+                is LoginUiState.WaitingForCloudSpaceInitialization,
+                is LoginUiState.RetryScheduled -> {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -93,13 +98,22 @@ fun LoginScreen(
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = stringResource(R.string.login_auth_in_progress),
+                            text = stringResource(
+                                when (state) {
+                                    LoginUiState.CheckingCloudSpaceInitializationState -> R.string.login_cloud_space_checking
+                                    is LoginUiState.WaitingForCloudSpaceInitialization -> R.string.login_cloud_space_preparing
+                                    is LoginUiState.RetryScheduled -> R.string.login_cloud_space_retry_scheduled
+                                    LoginUiState.FetchingCloudPairingCredentials -> R.string.login_cloud_space_fetching_credentials
+                                    LoginUiState.RequestingCloudSpaceInitialization -> R.string.login_cloud_space_initializing
+                                    else -> R.string.login_auth_in_progress
+                                }
+                            ),
                             textAlign = TextAlign.Center
                         )
                     }
                 }
 
-                is LoginUiState.Unauthenticated -> {
+                LoginUiState.AwaitingIamSignIn -> {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -143,6 +157,7 @@ fun LoginScreen(
                                 if (BuildConfig.DEBUG) {
                                     Log.d(TAG, "Sign in button clicked, launching auth intent")
                                 }
+                                viewModel.resetLoginState()
                                 val authIntent = viewModel.getAuthIntent()
                                 authLauncher.launch(authIntent)
                             }) {
@@ -184,8 +199,16 @@ fun LoginScreen(
                     }
                 }
 
-                is LoginUiState.Error -> {
-                    val message = (uiState as LoginUiState.Error).message
+                is LoginUiState.Error,
+                is LoginUiState.RetryLimitReached,
+                is LoginUiState.SupportRequired,
+                LoginUiState.SessionExpired -> {
+                    val message = when (state) {
+                        is LoginUiState.Error -> state.message
+                        is LoginUiState.RetryLimitReached -> stringResource(R.string.login_cloud_space_retry_limit_reached)
+                        is LoginUiState.SupportRequired -> stringResource(R.string.login_cloud_space_support_required)
+                        else -> stringResource(R.string.login_session_expired)
+                    }
                     Log.w(TAG, "Showing error state: $message")
 
                     Column(
@@ -235,25 +258,33 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        Button(
-                            onClick = viewModel::retryAuth,
-                            modifier = Modifier
-                                .fillMaxWidth(0.6f)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.height(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(R.string.login_try_again),
-                                style = MaterialTheme.typography.labelLarge
-                            )
+                        if (state !is LoginUiState.SupportRequired) {
+                            Button(
+                                onClick = viewModel::retry,
+                                modifier = Modifier
+                                    .fillMaxWidth(0.6f)
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.height(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(
+                                        when (state) {
+                                            is LoginUiState.RetryLimitReached -> R.string.login_cloud_space_retry_setup
+                                            LoginUiState.SessionExpired -> R.string.login_sign_in_again
+                                            else -> R.string.login_try_again
+                                        }
+                                    ),
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
                         }
                     }
                 }

@@ -6,7 +6,9 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import net.openid.appauth.*
 import javax.inject.Inject
-import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import androidx.core.net.toUri
@@ -42,7 +44,7 @@ class OAuthManager @Inject constructor(
         return authService.getAuthorizationRequestIntent(authRequest)
     }
 
-    override suspend fun exchangeCodeForToken(intent: Intent) {
+    override suspend fun exchangeCodeForTokens(intent: Intent) {
         val resp = AuthorizationResponse.fromIntent(intent)
         val ex = AuthorizationException.fromIntent(intent)
 
@@ -56,8 +58,9 @@ class OAuthManager @Inject constructor(
 
         // Exchange the authorization code for tokens
         val tokenRequest = resp.createTokenExchangeRequest()
-        val tokens = suspendCoroutine { continuation ->
+        val tokenResponse = suspendCancellableCoroutine<TokenResponse> { continuation ->
             authService.performTokenRequest(tokenRequest) { response, exception ->
+                if (!continuation.isActive) return@performTokenRequest
                 if (exception != null) {
                     continuation.resumeWithException(exception)
                 } else if (response != null) {
@@ -71,13 +74,14 @@ class OAuthManager @Inject constructor(
 
         // Validate that the required tokens are present before using them
         val accessToken =
-            requireNotNull(tokens.accessToken) { "Access Token was null in the token response." }
+            requireNotNull(tokenResponse.accessToken) { "Access Token was null in the token response." }
         val refreshToken =
-            requireNotNull(tokens.refreshToken) { "Refresh Token was null in the token response." }
+            requireNotNull(tokenResponse.refreshToken) { "Refresh Token was null in the token response." }
 
         // Save and return the validated access token
+        currentCoroutineContext().ensureActive()
         oauthTokenRepository.saveTokens(accessToken, refreshToken)
-        Log.w(TAG, "exchangeCodeForToken: access token saved")
+        Log.w(TAG, "exchangeCodeForTokens: access token saved")
         if (BuildConfig.DEBUG) Log.d(TAG, "saved accessToken: $accessToken")
 //        return accessToken
     }

@@ -4,6 +4,16 @@
 
     <!-- Login Screen -->
     <string name="login_auth_in_progress">Authentication in Progress. Please Wait…</string>
+    <string name="login_cloud_space_checking">Checking your cloud storage setup…</string>
+    <string name="login_cloud_space_preparing">Preparing your cloud storage. Please wait…</string>
+    <string name="login_cloud_space_retry_scheduled">Your cloud storage is recovering. We will check again when the next attempt is due.</string>
+    <string name="login_cloud_space_fetching_credentials">Getting your cloud connection details…</string>
+    <string name="login_cloud_space_initializing">Requesting another cloud storage setup attempt…</string>
+    <string name="login_cloud_space_retry_limit_reached">Cloud storage setup could not finish after several attempts. You can start another setup attempt.</string>
+    <string name="login_cloud_space_support_required">Cloud storage setup could not finish. Please contact support for help.</string>
+    <string name="login_cloud_space_retry_setup">Retry cloud setup</string>
+    <string name="login_session_expired">Your session has expired or your account is unavailable. Please sign in again.</string>
+    <string name="login_sign_in_again">Sign in again</string>
     <string name="login_title">Graphene Photos</string>
     <string name="login_subtitle">Private cloud backup. Keys stay on your phone.</string>
     <string name="login_learn_more">Learn more</string>

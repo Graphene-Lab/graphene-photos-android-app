@@ -51,10 +51,10 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
     }
 
     fun getEmail(): String? {
-        val token = getAccessToken()
-        return if (token != null) {
+        val accessToken = getAccessToken()
+        return if (accessToken != null) {
             try {
-                val jwt = JWT(token)
+                val jwt = JWT(accessToken)
                 jwt.getClaim("email").asString()
             } catch (e: Exception) {
                 // Handle potential decoding errors

@@ -4,5 +4,5 @@ import android.content.Intent
 
 interface IOAuthManager {
     fun getAuthIntent(): Intent
-    suspend fun exchangeCodeForToken(intent: Intent)
+    suspend fun exchangeCodeForTokens(intent: Intent)
 }

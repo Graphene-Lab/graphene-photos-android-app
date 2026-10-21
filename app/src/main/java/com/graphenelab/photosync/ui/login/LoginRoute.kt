@@ -15,7 +15,7 @@ fun LoginRoute(
 ) {
     LaunchedEffect(oauthZkCancelled) {
         if (!oauthZkCancelled) return@LaunchedEffect
-        viewModel.retryAuth()
+        viewModel.resetLoginState()
         onOauthZkCancelConsumed()
     }
 

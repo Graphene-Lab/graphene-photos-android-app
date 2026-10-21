@@ -54,15 +54,15 @@ class StartupViewModel @Inject constructor(
         coroutineScope {
             val hasSessionDeferred = async { sessionRepository.hasSession() }
             val hasQrCredentialsDeferred = async { sessionRepository.hasCloudSpaceCredentials() }
-            val hasOauthTokenDeferred = async { !oauthTokenRepository.getAccessToken().isNullOrBlank() }
+            val hasIamAccessTokenDeferred = async { !oauthTokenRepository.getAccessToken().isNullOrBlank() }
             val isEncryptionEnabledDeferred = async { appSettingsRepository.isEncryptionEnabled() }
 
             val hasSession = hasSessionDeferred.await()
             val hasQrCredentials = hasQrCredentialsDeferred.await()
-            val hasOauthToken = hasOauthTokenDeferred.await()
+            val hasIamAccessToken = hasIamAccessTokenDeferred.await()
             AppStartupTrace.mark("StartupViewModel.resolve:authStateLoaded")
 
-            if (hasSession && (hasOauthToken || hasQrCredentials)) {
+            if (hasSession && (hasIamAccessToken || hasQrCredentials)) {
                 val startDestination =
                     if (!isEncryptionEnabledDeferred.await() || cseMasterKeyRepository.hasKey()) {
                         "sync"
