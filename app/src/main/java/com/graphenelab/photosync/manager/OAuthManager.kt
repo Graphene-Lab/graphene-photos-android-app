@@ -12,14 +12,14 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import androidx.core.net.toUri
-import com.graphenelab.photosync.data.repository.OauthTokenRepository
+import com.graphenelab.photosync.domain.repositroy.IOauthTokenRepository
 import com.graphenelab.photosync.manager.interfaces.IOAuthManager
 import dagger.hilt.android.scopes.ViewModelScoped
 
 @ViewModelScoped
 class OAuthManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val oauthTokenRepository: OauthTokenRepository
+    private val oauthTokenRepository: IOauthTokenRepository
 ) : IOAuthManager {
     private val authService = AuthorizationService(context)
     private val serviceConfig = AuthorizationServiceConfiguration(

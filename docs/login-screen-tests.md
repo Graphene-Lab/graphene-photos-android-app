@@ -6,7 +6,7 @@ Run from PowerShell with the project's Android SDK (API 35) and a compatible JDK
 .\scripts\test-login.ps1
 ```
 
-Include repository, initialization-controller, and ViewModel tests:
+Include repository, initialization-controller, ViewModel, and secure-storage recovery tests:
 
 ```powershell
 .\scripts\test-login.ps1 -IncludeUnitTests
@@ -43,3 +43,19 @@ These tests verify rendered text, progress indicators, existing handlers, reques
 The focused commands explicitly load `scripts/cloud-space-tests.init.gradle`. This temporarily excludes three older test source files that already fail compilation: `FullScanServiceTest.kt`, `PhotoSyncWorkerTest.kt`, and `FullScanProcessManagerTest.kt`. All other test sources remain available. The normal Gradle test task retains these files; no global exclusions or existing test deletions were introduced. Remove the focused init script once those unrelated tests have been repaired.
 
 Compose/Robolectric tests use JUnit 4 via the Vintage engine. Existing JUnit 5 tests continue to run through Jupiter in the same Gradle task.
+
+## Secure-storage regression tests
+
+`SecureStorageRecoveryTest` exercises the real `TokenStorage`, `OauthTokenRepository`, and `StartupViewModel` against a token-store failure matching the device report (`AEADBadTagException` while opening encrypted preferences). Android preference files and deletion/cache behavior are real under Robolectric. Only the AndroidX encryption factory and master-key builder are replaced, because a local JVM does not reproduce the phone's hardware-backed Keystore.
+
+The tests cover startup reaching login, saving tokens after recovery, corrupt access/refresh values, malformed keysets, concurrent readers, failed deletion, and bounded retry when encryption stays unavailable. They check that recovery preserves the session and cloud-encryption-key stores and never deletes their shared Keystore key. Persistent session encryption failures must not write a plaintext fallback. Resource checks verify exclusions for all encrypted stores and the legacy session fallback in both backup XML formats, including cloud backup and device transfer.
+
+Token recovery deletes only `secret_shared_prefs.xml`, then retries encrypted storage once. Unavailable token reads mean signed out; unavailable token writes fail visibly. Session recovery can reset only its own unreadable preferences and also retries once. The cloud-encryption-key store is never automatically reset by either recovery path. This does not recover a cloud encryption key that was already lost or made unreadable before the fix.
+
+To run just these regression tests:
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest --tests 'com.graphenelab.photosync.data.local.secure.SecureStorageRecoveryTest' --init-script scripts/cloud-space-tests.init.gradle --console=plain
+```
+
+Physical-device validation of uninstall/reinstall and restore behavior remains necessary. Backup exclusions prevent future backups/transfers of these files; the local recovery path handles an unreadable token store that is already present.

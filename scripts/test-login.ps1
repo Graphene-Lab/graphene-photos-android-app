@@ -15,7 +15,8 @@ if ($IncludeUnitTests) {
     $gradleArguments += @(
         '--tests', 'com.graphenelab.photosync.ui.login.LoginViewModelTest',
         '--tests', 'com.graphenelab.photosync.manager.CloudSpaceInitializationControllerTest',
-        '--tests', 'com.graphenelab.photosync.data.repository.CloudSpaceRepositoryTest'
+        '--tests', 'com.graphenelab.photosync.data.repository.CloudSpaceRepositoryTest',
+        '--tests', 'com.graphenelab.photosync.data.local.secure.SecureStorageRecoveryTest'
     )
 }
 if ($Offline) {

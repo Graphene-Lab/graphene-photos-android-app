@@ -12,9 +12,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.File
+import java.io.IOException
 import java.security.GeneralSecurityException
-import java.security.KeyStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.content.edit
@@ -39,77 +38,43 @@ class SessionRepository @Inject constructor(
     }
 
     private val encryptedPrefs: SharedPreferences by lazy {
-        createEncryptedPreferences()
+        createEncryptedPreferencesWithRecovery()
+    }
+
+    private fun createEncryptedPreferencesWithRecovery(): SharedPreferences {
+        return try {
+            createEncryptedPreferences()
+        } catch (e: GeneralSecurityException) {
+            recreateSessionPreferences(e)
+        } catch (e: SecurityException) {
+            recreateSessionPreferences(e)
+        } catch (e: IOException) {
+            recreateSessionPreferences(e)
+        }
     }
 
     private fun createEncryptedPreferences(): SharedPreferences {
-        return try {
-            val masterKey = MasterKey.Builder(context, MASTER_KEY_ALIAS)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-
-            EncryptedSharedPreferences.create(
-                context,
-                PREF_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: GeneralSecurityException) {
-            Log.w(TAG, "Failed to create encrypted preferences due to security exception, clearing corrupted data and retrying", e)
-            clearCorruptedPreferences()
-            
-            // Retry once after clearing corrupted data
-            try {
-                val masterKey = MasterKey.Builder(context, MASTER_KEY_ALIAS)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-
-                EncryptedSharedPreferences.create(
-                    context,
-                    PREF_NAME,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                )
-            } catch (e2: Exception) {
-                Log.e(TAG, "Still failed after clearing corrupted data, falling back to regular SharedPreferences", e2)
-                // Fallback to regular SharedPreferences if encryption continues to fail
-                context.getSharedPreferences(PREF_NAME + "_fallback", Context.MODE_PRIVATE)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error creating encrypted preferences, falling back to regular SharedPreferences", e)
-            // Fallback to regular SharedPreferences for any other unexpected errors
-            context.getSharedPreferences(PREF_NAME + "_fallback", Context.MODE_PRIVATE)
-        }
+        val masterKey = MasterKey.Builder(context, MASTER_KEY_ALIAS)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        return EncryptedSharedPreferences.create(
+            context,
+            PREF_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
     }
 
-    private fun clearCorruptedPreferences() {
-        try {
-            // Clear the encrypted preferences file
-            val prefsFile = File(context.applicationInfo.dataDir, "shared_prefs/$PREF_NAME.xml")
-            if (prefsFile.exists()) {
-                val deleted = prefsFile.delete()
-                Log.d(TAG, "Encrypted preferences file deleted: $deleted")
-            }
-
-            // Clear the master key from Android Keystore
-            val keyStore = KeyStore.getInstance("AndroidKeyStore")
-            keyStore.load(null)
-            if (keyStore.containsAlias(MASTER_KEY_ALIAS)) {
-                keyStore.deleteEntry(MASTER_KEY_ALIAS)
-                Log.d(TAG, "Master key deleted from keystore")
-            }
-
-            // Also try to clear any backup files
-            val backupFile = File(context.applicationInfo.dataDir, "shared_prefs/$PREF_NAME.xml.bak")
-            if (backupFile.exists()) {
-                backupFile.delete()
-                Log.d(TAG, "Backup preferences file deleted")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error clearing corrupted preferences", e)
+    private fun recreateSessionPreferences(exception: Exception): SharedPreferences {
+        Log.w(TAG, "Resetting unreadable encrypted session storage", exception)
+        // Android also invalidates its cached SharedPreferences and removes the .bak file.
+        // Never delete the wrapping key: token and CSE key stores use the same alias.
+        if (!context.deleteSharedPreferences(PREF_NAME)) {
+            throw IOException("Unable to clear encrypted session storage", exception)
         }
+        // Retry once and propagate failure; session secrets must never fall back to plaintext.
+        return createEncryptedPreferences()
     }
 
     override suspend fun saveSession(session: SessionDataModel) = withContext(Dispatchers.IO) {
