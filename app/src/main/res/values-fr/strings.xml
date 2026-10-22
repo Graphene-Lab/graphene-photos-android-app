@@ -194,4 +194,10 @@
     <string name="folders_no_folders">Aucun dossier de photos trouvé</string>
     <string name="folders_item_photos_count">%1$d photos</string>
     <string name="folders_manage_permissions">Vous ne trouvez pas votre dossier ? Appuyez ici pour gérer les autorisations</string>
+    <string name="folders_retry">Réessayer</string>
+    <string name="folders_permission_required_title">Accès aux photos requis</string>
+    <string name="folders_permission_required_body">Pour afficher les dossiers que vous pouvez sauvegarder, autorisez cette application à lire vos photos.</string>
+    <string name="folders_permission_grant">Autoriser l\'accès</string>
+    <string name="folders_permission_open_settings">Ouvrir les paramètres de l\'application</string>
+    <string name="folders_limited_access">Accès limité aux photos : seules les photos que vous avez sélectionnées sont affichées. Appuyez pour gérer.</string>
 </resources>

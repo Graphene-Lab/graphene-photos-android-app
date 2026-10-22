@@ -194,4 +194,10 @@
     <string name="folders_no_folders">Nessuna cartella di foto trovata</string>
     <string name="folders_item_photos_count">%1$d foto</string>
     <string name="folders_manage_permissions">Non vedi la tua cartella? Tocca qui per gestire i permessi</string>
+    <string name="folders_retry">Riprova</string>
+    <string name="folders_permission_required_title">Serve l\'accesso alle foto</string>
+    <string name="folders_permission_required_body">Per mostrare le cartelle che puoi sincronizzare, consenti a questa app di leggere le tue foto.</string>
+    <string name="folders_permission_grant">Consenti accesso</string>
+    <string name="folders_permission_open_settings">Apri impostazioni app</string>
+    <string name="folders_limited_access">Accesso limitato alle foto: vengono mostrate solo le foto che hai selezionato. Tocca per gestire.</string>
 </resources>

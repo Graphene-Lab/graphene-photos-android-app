@@ -194,4 +194,10 @@
     <string name="folders_no_folders">No se encontraron carpetas de fotos</string>
     <string name="folders_item_photos_count">%1$d fotos</string>
     <string name="folders_manage_permissions">¿No ves tu carpeta? Toca aquí para administrar los permisos</string>
+    <string name="folders_retry">Reintentar</string>
+    <string name="folders_permission_required_title">Se necesita acceso a las fotos</string>
+    <string name="folders_permission_required_body">Para mostrar las carpetas que puedes respaldar, permite que esta aplicación lea tus fotos.</string>
+    <string name="folders_permission_grant">Conceder acceso</string>
+    <string name="folders_permission_open_settings">Abrir ajustes de la aplicación</string>
+    <string name="folders_limited_access">Acceso limitado a las fotos: solo se muestran las fotos que seleccionaste. Toca para administrar.</string>
 </resources>

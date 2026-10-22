@@ -194,4 +194,10 @@
     <string name="folders_no_folders">Папки с фото не найдены</string>
     <string name="folders_item_photos_count">%1$d фото</string>
     <string name="folders_manage_permissions">Не видите свою папку? Нажмите здесь для управления разрешениями</string>
+    <string name="folders_retry">Повторить</string>
+    <string name="folders_permission_required_title">Нужен доступ к фото</string>
+    <string name="folders_permission_required_body">Чтобы показать папки для резервного копирования, разрешите этому приложению читать ваши фото.</string>
+    <string name="folders_permission_grant">Предоставить доступ</string>
+    <string name="folders_permission_open_settings">Открыть настройки приложения</string>
+    <string name="folders_limited_access">Ограниченный доступ к фото: показаны только выбранные вами фото. Нажмите для управления.</string>
 </resources>

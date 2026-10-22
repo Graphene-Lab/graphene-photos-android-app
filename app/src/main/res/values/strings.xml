@@ -206,4 +206,10 @@
     <string name="folders_no_folders">No photo folders found</string>
     <string name="folders_item_photos_count">%1$d photos</string>
     <string name="folders_manage_permissions">Don\'t see your folder? Tap here to manage photo permissions</string>
+    <string name="folders_retry">Retry</string>
+    <string name="folders_permission_required_title">Photo access needed</string>
+    <string name="folders_permission_required_body">To show the folders you can back up, allow this app to read your photos.</string>
+    <string name="folders_permission_grant">Grant access</string>
+    <string name="folders_permission_open_settings">Open app settings</string>
+    <string name="folders_limited_access">Limited photo access: only the photos you selected are shown. Tap to manage.</string>
 </resources>
