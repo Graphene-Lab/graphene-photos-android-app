@@ -5,6 +5,9 @@ import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -20,10 +23,12 @@ import com.graphenelab.photosync.manager.interfaces.IPermissionsManager
 import com.graphenelab.photosync.ui.theme.AppTheme
 import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Before
@@ -45,6 +50,7 @@ import kotlin.test.assertTrue
  * manage-permissions action was hidden inside the non-empty branch.
  */
 @RunWith(RobolectricTestRunner::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @Config(application = Application::class, sdk = [35], qualifiers = "en-rUS-w411dp-h891dp")
 @LooperMode(LooperMode.Mode.PAUSED)
 class FoldersScreenTest {
@@ -115,7 +121,7 @@ class FoldersScreenTest {
         compose.onNodeWithText(text(R.string.folders_permission_open_settings)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.folders_no_folders)).assertDoesNotExist()
 
-        assertTrue("the launcher must be registered before the first evaluation", permissions.launcherSet)
+        assertTrue(permissions.launcherSet, "the launcher must be registered before the first evaluation")
         assertEquals(1, permissions.requests)
         verify(exactly = 0) { photoLocalDataSource.getAvailableFolders() }
     }
@@ -184,12 +190,12 @@ class FoldersScreenTest {
     fun `tapping a folder saves the new selection`() {
         val viewModel = show(level = PhotoAccessLevel.Full, folders = listOf(camera, screenshots))
         compose.waitForIdle()
-        verify(exactly = 0) { syncRepository.saveSelectedFolders(any()) }
+        coVerify(exactly = 0) { syncRepository.saveSelectedFolders(any()) }
 
         compose.runOnIdle { viewModel.toggleFolder(camera.bucketId, true) }
         compose.waitForIdle()
 
-        verify(exactly = 1) { syncRepository.saveSelectedFolders(setOf(camera.bucketId)) }
+        coVerify(exactly = 1) { syncRepository.saveSelectedFolders(setOf(camera.bucketId)) }
     }
 
     @Test
@@ -201,7 +207,7 @@ class FoldersScreenTest {
         compose.runOnIdle { viewModel.toggleFolder(camera.bucketId, true) }
         compose.waitForIdle()
 
-        verify(exactly = 1) {
+        coVerify(exactly = 1) {
             syncRepository.saveSelectedFolders(setOf(screenshots.bucketId, camera.bucketId))
         }
     }
@@ -232,8 +238,12 @@ class FoldersScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithText(camera.displayName).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.sync_start_full_scan)).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.sync_start_full_scan)).performClick()
+        // The FAB's label is nested under cleared semantics; click the actual button.
+        val startButton = compose.onNode(
+            hasClickAction() and hasAnyDescendant(hasText(text(R.string.sync_start_full_scan))),
+            useUnmergedTree = true
+        )
+        startButton.assertIsDisplayed().performClick()
         compose.waitForIdle()
 
         verify(exactly = 1) { backgroundSyncManager.startFullScanService() }

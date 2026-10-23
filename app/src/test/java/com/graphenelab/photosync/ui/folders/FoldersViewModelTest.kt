@@ -9,6 +9,7 @@ import com.graphenelab.photosync.manager.interfaces.IBackgroundSyncManager
 import com.graphenelab.photosync.manager.interfaces.IPermissionsManager
 import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -250,7 +251,7 @@ class FoldersViewModelTest {
 
         assertEquals(FoldersPermissionState.Granted, viewModel.uiState.value.permissionState)
         assertEquals(setOf(camera.bucketId), viewModel.uiState.value.selectedFolderIds)
-        verify(exactly = 0) { syncRepository.saveSelectedFolders(any()) }
+        coVerify(exactly = 0) { syncRepository.saveSelectedFolders(any()) }
     }
 
     @Test
@@ -263,7 +264,7 @@ class FoldersViewModelTest {
         viewModel.onScreenShown()
         advanceUntilIdle()
 
-        verify(exactly = 1) { syncRepository.saveSelectedFolders(setOf(camera.bucketId)) }
+        coVerify(exactly = 1) { syncRepository.saveSelectedFolders(setOf(camera.bucketId)) }
     }
 
     @Test
