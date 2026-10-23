@@ -1,23 +1,9 @@
-require 'json'
-require 'open3'
-require 'tmpdir'
-require 'fileutils'
+require_relative '../scripts/release'
 
 module PhotosRelease
-  ROOT = File.expand_path('..', __dir__)
-  PACKAGE_NAME = 'com.graphenelab.photosync'
-  AAB_PATH = File.join(ROOT, 'app/build/outputs/bundle/release/app-release.aab')
-
   # A single parser validates native Gradle versions and notes for all entry points.
   def self.info(root: ENV.fetch('PLAY_RELEASE_SOURCE', ROOT))
-    stdout, status = Open3.capture2(
-      ENV.fetch('PYTHON', 'python'), '-c',
-      'import json,sys; sys.path.insert(0,sys.argv[1]); import release; print(json.dumps(release.release_info("play",sys.argv[2])))',
-      File.join(ROOT, 'scripts'), root
-    )
-    raise ArgumentError, 'Complete the exact versionCode Play notes in the original source commit before publishing.' unless status.success?
-
-    JSON.parse(stdout)
+    release_info('play', root)
   end
 
   def self.credentials_file

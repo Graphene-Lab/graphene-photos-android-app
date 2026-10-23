@@ -2,19 +2,21 @@
 
 Photos is a native Android Gradle project. It uses the checked-in Gradle 8.11.1 wrapper, AGP 8.10.1, Kotlin 2.0.21, Java 21 on CI (Java/Kotlin bytecode target 11), Android platform/build tools 35, and the `release` variant. Modules are `app` and `communicationLib`; there are no product flavors. The existing applicationId is **com.graphenelab.photosync**, including its OAuth redirect scheme. Debug adds `.debug` to the applicationId.
 
+Gradle owns building, testing and version bumps. Ruby 3.3 and Fastlane own release automation: `scripts/release.rb` provides the local commands, shared version/note validation and GitHub/artifact helpers; Fastlane handles Play upload and promotion. The workflow and release checks use this same Ruby runtime. Python is no longer required for release tooling. Existing Google identity, permissions, signing keys and GitHub secrets need no changes for this migration.
+
 Publishing uses **Actions → Android Google Play → Run workflow** on `master` in `Graphene-Lab/graphene-photos-android-app` (repository ID `996638361`). The workflow has only `workflow_dispatch`. Commits, version bumps and tag pushes do not trigger publishing. The default action is **build** (save an AAB without publishing); Play uploads default to **internal**. Ordinary local builds never dispatch Actions.
 
 ## Local builds
 
 Use JDK 21, the Android SDK with API/build tools 35, and the project's existing signing/configuration files. Set `JAVA_HOME` to that JDK; the Gradle Java toolchain compatibility target remains 11. These commands use the current local files, including uncommitted edits:
 
-| Native PowerShell command | Equivalent Python wrapper | Result |
+| Native PowerShell command | Equivalent Ruby wrapper | Result |
 | --- | --- | --- |
-| `.\gradlew.bat buildLocalApk` | `python scripts/release.py build:local:apk` | `app/build/outputs/apk/release/app-release.apk` |
-| `.\gradlew.bat buildLocalAab` | `python scripts/release.py build:local:aab` | `app/build/outputs/bundle/release/app-release.aab` |
-| `.\gradlew.bat buildLocalBoth` | `python scripts/release.py build:local:both` | Both files above |
+| `.\gradlew.bat buildLocalApk` | `ruby scripts/release.rb build:local:apk` | `app/build/outputs/apk/release/app-release.apk` |
+| `.\gradlew.bat buildLocalAab` | `ruby scripts/release.rb build:local:aab` | `app/build/outputs/bundle/release/app-release.aab` |
+| `.\gradlew.bat buildLocalBoth` | `ruby scripts/release.rb build:local:both` | Both files above |
 
-On Linux/macOS, use `bash ./gradlew` instead of `.\gradlew.bat`. Python wrappers require Python 3.10+ and the standard library only. No Expo, React Native, npm, JavaScript installation or Firebase configuration is introduced.
+On Linux/macOS, use `bash ./gradlew` instead of `.\gradlew.bat`. For the wrappers, put Ruby 3.3 on `PATH` and check `ruby --version`. The wrappers use standard libraries; they do not require Bundler or installed Fastlane gems. Native Gradle commands need no Ruby. No Expo, React Native, npm, JavaScript installation or Firebase configuration is introduced.
 
 Use Photos' existing **registered upload keystore**, not a newly generated key. Existing `keystore.properties` takes priority over environment variables:
 
@@ -37,11 +39,11 @@ The preparation order is **bump version → write/review both note files → com
 # Defaults to patch versionName + 1 and versionCode + 1.
 .\gradlew.bat versionBump
 # Equivalent:
-python scripts/release.py version:bump
+ruby scripts/release.rb version:bump
 
 # Explicit larger version/code when needed:
 .\gradlew.bat versionBump -PversionName=1.2.0 -PversionCode=30
-python scripts/release.py version:bump --version-name 1.2.0 --version-code 30
+ruby scripts/release.rb version:bump --version-name 1.2.0 --version-code 30
 ```
 
 The native `versionBump` task updates literal `versionName`/`versionCode` values in `app/build.gradle.kts`. Both must increase; code must remain at most 2100000000. It creates separate UTF-8 templates, preserving any existing files for the new version. From the inspected 1.1.8 / 20 source, a default bump creates:
@@ -56,9 +58,9 @@ Replace `RELEASE_NOTES_TODO` with reviewed text. Blank, comment-only or unfinish
 Validate locally without publishing:
 
 ```powershell
-python scripts/release.py notes github
-python scripts/release.py notes play
-python scripts/release.py notes both
+ruby scripts/release.rb notes github
+ruby scripts/release.rb notes play
+ruby scripts/release.rb notes both
 ```
 
 Then review changes and commit/push the intended app changes, version values and completed notes to `master`. Stage only intended files. No Git operations happen in the bump or notes commands. This implementation does not bump, commit or push your current version for you.
@@ -67,20 +69,20 @@ A new upload needs an unused versionCode. The upload lane rejects codes at or be
 
 ## All workflow choices and local dispatch commands
 
-Install/authenticate the GitHub CLI (`gh auth login`) before using dispatch wrappers. They invoke `gh workflow run android-play.yml --repo Graphene-Lab/graphene-photos-android-app --ref master` with the selected inputs. They use GitHub's pushed `master` commit, not local/unpushed files, and do not build, tag, commit or publish locally. Run `python scripts/release.py --help` for the command list.
+Install/authenticate the GitHub CLI (`gh auth login`) before using dispatch wrappers. They invoke `gh workflow run android-play.yml --repo Graphene-Lab/graphene-photos-android-app --ref master` with the selected inputs. They use GitHub's pushed `master` commit, not local/unpushed files, and do not build, tag, commit or publish locally. Run `ruby scripts/release.rb --help` for the command list.
 
 | Choice | Command | Actions inputs |
 | --- | --- | --- |
-| GitHub Release page only, no Android build | `python scripts/release.py release:github` | `action=release`, `destination=github` |
-| Build/upload to internal only | `python scripts/release.py release:play` | `action=release`, `destination=play`, `play_track=internal` |
-| GitHub page first, internal upload, signed APK attachment | `python scripts/release.py release:both` | `action=release`, `destination=both`, `play_track=internal` |
-| Direct production only | `python scripts/release.py release:play --play-track production` | `action=release`, `destination=play`, `play_track=production` |
-| GitHub page first, direct production, signed APK attachment | `python scripts/release.py release:both --play-track production` | `action=release`, `destination=both`, `play_track=production` |
-| Promote latest internal without rebuilding | `python scripts/release.py release:promote` | `action=promote`, blank `version_code` |
-| Promote exact internal code | `python scripts/release.py release:promote 21` | `action=promote`, `version_code=21` |
-| Verify configuration and read access, no publishing | `python scripts/release.py release:verify` | `action=verify` |
-| Check/build only, save signed AAB artifact | `python scripts/release.py release:build` | `action=build` |
-| Upload an existing successful CI build to internal | `python scripts/release.py release:internal 123456789` | `action=internal`, `build_run_id=123456789` |
+| GitHub Release page only, no Android build | `ruby scripts/release.rb release:github` | `action=release`, `destination=github` |
+| Build/upload to internal only | `ruby scripts/release.rb release:play` | `action=release`, `destination=play`, `play_track=internal` |
+| GitHub page first, internal upload, signed APK attachment | `ruby scripts/release.rb release:both` | `action=release`, `destination=both`, `play_track=internal` |
+| Direct production only | `ruby scripts/release.rb release:play --play-track production` | `action=release`, `destination=play`, `play_track=production` |
+| GitHub page first, direct production, signed APK attachment | `ruby scripts/release.rb release:both --play-track production` | `action=release`, `destination=both`, `play_track=production` |
+| Promote latest internal without rebuilding | `ruby scripts/release.rb release:promote` | `action=promote`, blank `version_code` |
+| Promote exact internal code | `ruby scripts/release.rb release:promote 21` | `action=promote`, `version_code=21` |
+| Verify configuration and read access, no publishing | `ruby scripts/release.rb release:verify` | `action=verify` |
+| Check/build only, save signed AAB artifact | `ruby scripts/release.rb release:build` | `action=build` |
+| Upload an existing successful CI build to internal | `ruby scripts/release.rb release:internal 123456789` | `action=internal`, `build_run_id=123456789` |
 
 `play_track` applies only to release with `destination=play/both`. Saved-build reuse always targets internal. `build_run_id` applies only to internal reuse; `version_code` applies only to promotion. The numeric examples above are illustrative, not known valid Play codes/run IDs. All runs serialize in one Photos concurrency group.
 
@@ -156,7 +158,7 @@ Only Photos repository ID `996638361` should be a federation member of this acco
 gcloud services enable androidpublisher.googleapis.com iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com --project=graphene-play-publishing
 ```
 
-With gcloud installed/authenticated locally, run `python scripts/verify-google-identity.py`. It performs only describe/list/get-policy requests and validates the project, shared provider, Photos account, exact repository-only binding and enabled APIs. `--configured` is the workflow's variable check and does **not** claim a live IAM policy audit.
+With gcloud installed/authenticated locally, run `ruby scripts/verify-google-identity.rb`. It performs only describe/list/get-policy requests and validates the project, shared provider, Photos account, exact repository-only binding and enabled APIs. `--configured` is the workflow's variable check and does **not** claim a live IAM policy audit.
 
 ### 3. Grant Photos-only Google Play permissions
 
@@ -206,16 +208,15 @@ After the implementation is reviewed, committed and pushed with your approval, e
 
 ## Runtime, checks and internal helper commands
 
-GitHub-hosted Ubuntu 24.04 jobs start on fresh VMs. `ruby/setup-ruby` supplies Ruby 3.3 and Bundler, restores the cache keyed by `Gemfile.lock`, and installs locked gems on a cache miss. `gradle/actions/setup-gradle` caches Gradle dependencies. Java 21 and Android SDK 35 match Photos' native toolchain; no Explorer NDK/toolchain settings are copied.
+GitHub-hosted Ubuntu 24.04 jobs start on fresh VMs. `ruby/setup-ruby` supplies Ruby 3.3 and Bundler before running any release helper, restores the cache keyed by `Gemfile.lock`, and installs locked gems on a cache miss. Fastlane calls the shared Ruby version/note parser directly, without launching another language runtime. `gradle/actions/setup-gradle` caches Gradle dependencies. Java 21 and Android SDK 35 match Photos' native toolchain; no Explorer NDK/toolchain settings are copied.
 
 Focused checks (publishing and CLI dispatch are mocked):
 
 ```powershell
-python -m unittest discover -s tests/release -p 'test_*.py' -v
-ruby tests/release/fastlane_test.rb
-ruby tests/release/play_apk_test.rb
-python tests/release/check_gradle_tasks.py
-python tests/release/check_upload_key.py
+# Requires Ruby with minitest and rexml (both included in the locked bundle).
+ruby tests/release/run.rb
+ruby tests/release/check_gradle_tasks.rb
+ruby tests/release/check_upload_key.rb
 # With Ruby dependencies installed:
 bundle install
 bundle exec fastlane lanes
@@ -223,7 +224,7 @@ bundle exec fastlane lanes
 actionlint .github/workflows/android-play.yml
 ```
 
-The isolated Gradle check exercises the actual task script against a temporary miniature project, including template creation/preservation and invalid bumps; it never changes Photos' real version. Python/Ruby tests fail closed on unrecognized network/actions, cover destination-specific notes and Unicode limits, current versus original build notes, immutable tags, release-description retries, AAB provenance, production selection/promotion, Play APK polling and actual-file verification rejection paths.
+The isolated Gradle check exercises the actual task script against a temporary miniature project, including template creation/preservation and invalid bumps; it never changes Photos' real version. Ruby/Fastlane tests fail closed on unrecognized network/actions, cover destination-specific notes and Unicode limits, current versus original build notes, immutable tags, release-description retries, AAB provenance, production selection/promotion, Play APK polling and actual-file verification rejection paths.
 
 Native checks used before every new CI Play build:
 
@@ -233,4 +234,4 @@ Native checks used before every new CI Play build:
 
 `scripts/cloud-space-tests.init.gradle` is the existing focused test convention. It excludes only the three pre-existing test files already documented in [login-screen-tests.md](login-screen-tests.md); no test sources are deleted. Normal Gradle test tasks retain those sources. CI still executes all other available unit tests, and release lint remains required. `app/lint-baseline.xml` records only the ten pre-existing `MissingTranslation` errors for the login strings in `src/main/res/values/strings.xml`; it does not baseline warnings or new findings. The baseline is technical debt to remove when these translations are supplied.
 
-The internal `release.py` commands are called by the single workflow: `plan` writes step-selection outputs; `prepare-ci` verifies/restores signing and app settings; `prepare-release` validates notes and prepares the tag/page; `record-build` writes the manifest; `resolve-build` selects provenance and original source notes; `verify-build` checks the downloaded AAB; `resolve-apk` records the immutable release context; `attach-apk` verifies/attaches the actual APK. These helpers are workflow plumbing, not separate publishing/recovery modes. Fastlane lanes are `verify_access`, `build_release`, `publish track:internal|production`, and `promote version_code:<optional-code>`; prefer the workflow wrappers so checks and source/tag guards run in order.
+The internal `release.rb` commands are called by the single workflow: `plan` writes step-selection outputs; `prepare-ci` verifies/restores signing and app settings; `prepare-release` validates notes and prepares the tag/page; `record-build` writes the manifest; `resolve-build` selects provenance and original source notes; `verify-build` checks the downloaded AAB; `resolve-apk` records the immutable release context; `attach-apk` verifies/attaches the actual APK. These helpers are workflow plumbing, not separate publishing/recovery modes. Fastlane lanes are `verify_access`, `build_release`, `publish track:internal|production`, and `promote version_code:<optional-code>`; prefer the workflow wrappers so checks and source/tag guards run in order.

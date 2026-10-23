@@ -45,22 +45,17 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - run: python -m unittest discover -s tests/release -p 'test_*.py' -v
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-      - run: bundle exec ruby tests/release/fastlane_test.rb
-      - run: bundle exec ruby tests/release/play_apk_test.rb
+      - run: bundle exec ruby tests/release/run.rb
       - uses: actions/setup-java@v6.1.0
         with:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v6.4.0
-      - run: python tests/release/check_upload_key.py
-      - run: python tests/release/check_gradle_tasks.py
+      - run: bundle exec ruby tests/release/check_upload_key.rb
+      - run: bundle exec ruby tests/release/check_gradle_tasks.rb
 
   release:
     needs: checks
@@ -80,28 +75,25 @@ jobs:
       PLAY_APP_SIGNING_SHA256: ${{ vars.PLAY_APP_SIGNING_SHA256 }}
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: Select release steps
-        id: plan
-        run: python scripts/release.py plan
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
+      - name: Select release steps
+        id: plan
+        run: ruby scripts/release.rb plan
       - name: Validate Photos identity and APK signing pin
         if: steps.plan.outputs.authenticate_play == 'true'
         env:
           GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
         run: |
-          python scripts/verify-google-identity.py --configured
+          ruby scripts/verify-google-identity.rb --configured
       - name: Validate required notes, record immutable tag and publish GitHub page first
         if: steps.plan.outputs.prepare_release == 'true'
-        run: python scripts/release.py prepare-release
+        run: ruby scripts/release.rb prepare-release
       - name: Resolve version for Play APK attachment
         if: steps.plan.outputs.attach_apk == 'true'
-        run: python scripts/release.py resolve-apk
+        run: ruby scripts/release.rb resolve-apk
       - uses: actions/setup-java@v6.1.0
         if: steps.plan.outputs.prepare_signing == 'true'
         with:
@@ -116,7 +108,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_UPLOAD_CERT_SHA256: ${{ vars.ANDROID_UPLOAD_CERT_SHA256 }}
           APPLICATION_PROPERTIES: ${{ secrets.APPLICATION_PROPERTIES }}
-        run: python scripts/release.py prepare-ci
+        run: ruby scripts/release.rb prepare-ci
       - uses: android-actions/setup-android@v4.0.4
         if: steps.plan.outputs.build_android == 'true'
       - name: Install Photos Android SDK
@@ -133,7 +125,7 @@ jobs:
         run: |
           chmod +x gradlew
           bundle exec fastlane android build_release
-          python scripts/release.py record-build
+          ruby scripts/release.rb record-build
       - name: Save signed AAB and provenance
         if: steps.plan.outputs.build_android == 'true'
         uses: actions/upload-artifact@v7.0.2
@@ -146,7 +138,7 @@ jobs:
           retention-days: 14
       - name: Validate successful original build and committed Play notes
         if: steps.plan.outputs.download_aab == 'true'
-        run: python scripts/release.py resolve-build
+        run: ruby scripts/release.rb resolve-build
       - name: Download saved signed AAB
         if: steps.plan.outputs.download_aab == 'true'
         uses: actions/download-artifact@v8.0.2
@@ -159,7 +151,7 @@ jobs:
           digest-mismatch: error
       - name: Verify AAB content and original source provenance
         if: steps.plan.outputs.download_aab == 'true'
-        run: python scripts/release.py verify-build
+        run: ruby scripts/release.rb verify-build
       # Authenticate after compilation; keep short-lived credentials fresh for publishing.
       - name: Authenticate using Photos service account and GitHub OIDC
         if: steps.plan.outputs.authenticate_play == 'true'
@@ -182,7 +174,7 @@ jobs:
         run: bundle exec ruby scripts/download-play-apk.rb
       - name: Verify actual Photos APK signature, package and versions before attachment
         if: steps.plan.outputs.attach_apk == 'true'
-        run: python scripts/release.py attach-apk
+        run: ruby scripts/release.rb attach-apk
       - name: Promote selected internal version preserving Play release notes
         if: inputs.action == 'promote'
         run: bundle exec fastlane android promote version_code:"$PLAY_VERSION_CODE"
