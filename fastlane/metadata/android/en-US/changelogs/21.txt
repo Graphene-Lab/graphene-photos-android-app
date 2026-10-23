@@ -1,0 +1,1 @@
+Folder selection now asks for photo access when needed and refreshes after access is granted. Clearer guidance helps you manage denied or limited photo permissions, including Android 14's selected-photo access. Your existing folder selections are preserved.
