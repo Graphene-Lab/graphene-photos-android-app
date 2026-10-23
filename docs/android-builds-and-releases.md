@@ -2,7 +2,7 @@
 
 Photos is a native Android Gradle project. It uses the checked-in Gradle 8.11.1 wrapper, AGP 8.10.1, Kotlin 2.0.21, Java 21 on CI (Java/Kotlin bytecode target 11), Android platform/build tools 35, and the `release` variant. Modules are `app` and `communicationLib`; there are no product flavors. The existing applicationId is **com.graphenelab.photosync**, including its OAuth redirect scheme. Debug adds `.debug` to the applicationId.
 
-Gradle owns building, testing and version bumps. Ruby 3.3 and Fastlane own release automation: `scripts/release.rb` provides the local commands, shared version/note validation and GitHub/artifact helpers; Fastlane handles Play upload and promotion. The workflow and release checks use this same Ruby runtime. Python is no longer required for release tooling. Existing Google identity, permissions, signing keys and GitHub secrets need no changes for this migration.
+Gradle owns building, testing and version bumps. Ruby 3.3 and Fastlane own release automation: `scripts/release.rb` provides shared version/note validation, GitHub/artifact helpers and optional Ruby command wrappers; Fastlane handles Play upload and promotion. The workflow and release checks use this same Ruby runtime. Windows has two launchers: `.\release` for release preparation/publishing and `.\build` for builds. Both use existing GitHub CLI/Gradle commands and need no local Ruby or npm. Existing Google identity, permissions, signing keys and GitHub secrets need no changes.
 
 Publishing uses **Actions → Android Google Play → Run workflow** on `master` in `Graphene-Lab/graphene-photos-android-app` (repository ID `996638361`). The workflow has only `workflow_dispatch`. Commits, version bumps and tag pushes do not trigger publishing. The default action is **build** (save an AAB without publishing); Play uploads default to **internal**. Ordinary local builds never dispatch Actions.
 
@@ -10,13 +10,15 @@ Publishing uses **Actions → Android Google Play → Run workflow** on `master`
 
 Use JDK 21, the Android SDK with API/build tools 35, and the project's existing signing/configuration files. Set `JAVA_HOME` to that JDK; the Gradle Java toolchain compatibility target remains 11. These commands use the current local files, including uncommitted edits:
 
-| Native PowerShell command | Equivalent Ruby wrapper | Result |
+| Native PowerShell command | Windows shortcut | Result |
 | --- | --- | --- |
-| `.\gradlew.bat buildLocalApk` | `ruby scripts/release.rb build:local:apk` | `app/build/outputs/apk/release/app-release.apk` |
-| `.\gradlew.bat buildLocalAab` | `ruby scripts/release.rb build:local:aab` | `app/build/outputs/bundle/release/app-release.aab` |
-| `.\gradlew.bat buildLocalBoth` | `ruby scripts/release.rb build:local:both` | Both files above |
+| `.\gradlew.bat buildLocalApk` | `.\build apk` | `app/build/outputs/apk/release/app-release.apk` |
+| `.\gradlew.bat buildLocalAab` | `.\build aab` | `app/build/outputs/bundle/release/app-release.aab` |
+| `.\gradlew.bat buildLocalBoth` | `.\build both` | Both files above |
 
-On Linux/macOS, use `bash ./gradlew` instead of `.\gradlew.bat`. For the wrappers, put Ruby 3.3 on `PATH` and check `ruby --version`. The wrappers use standard libraries; they do not require Bundler or installed Fastlane gems. Native Gradle commands need no Ruby. No Expo, React Native, npm, JavaScript installation or Firebase configuration is introduced.
+On Windows, `build.cmd` calls `scripts/build.ps1` and `release.cmd` calls `scripts/release.ps1`, using the built-in Windows PowerShell 5.1. Run `.\build --help` or `.\release --help` for each command list; both also accept `help`, `-h`, or no arguments. The launchers run local tasks from their own repository directory, including when the path contains spaces. They reject unknown commands/options and return the GitHub CLI/Gradle exit code to the terminal. Local builds belong to `build`; publishing/promotion and version preparation belong to `release`.
+
+On Linux/macOS, use `bash ./gradlew` instead of `.\gradlew.bat`. The existing `ruby scripts/release.rb <command>` interface remains available on every supported Ruby platform; put Ruby 3.3 on `PATH` for those optional wrappers. They use standard libraries and need no installed Fastlane gems. No Expo, React Native, npm, JavaScript installation or Firebase configuration is introduced.
 
 Use Photos' existing **registered upload keystore**, not a newly generated key. Existing `keystore.properties` takes priority over environment variables:
 
@@ -29,7 +31,7 @@ Use Photos' existing **registered upload keystore**, not a newly generated key. 
 
 `storeFile` is absolute or relative to the project root. `keystore.properties.example` describes the format. Keep real keystores/password files ignored. `application.properties` supplies `BASE_URL_RELEASE`, `STRIPE_PUBLIC_KEY_RELEASE`, and the existing debug values (`BASE_URL_DEBUG`, `STRIPE_PUBLIC_KEY_DEBUG`). The new local shortcuts and CI's `-PrequireReleaseConfiguration=true` reject missing release signing or blank release application values. Existing ordinary Gradle tasks keep their signing behavior. Local APKs use the upload key, which can differ from the Play app signing key; use the Play-generated APK for distribution alongside Play installations.
 
-Local and build-only commands compile without completed release notes. The ignored existing `build-release-local.ps1` is preserved; the tracked shortcuts above are the supported shared commands.
+Local and build-only commands compile without completed release notes. The shared `.\build` shortcuts above call the existing tracked `buildLocalApk`, `buildLocalAab` and `buildLocalBoth` Gradle tasks directly; they add no second Android build implementation. Set `JAVA_HOME` for the local toolchain, and run `.\gradlew.bat clean` separately when a clean build is needed.
 
 ## Prepare a release
 
@@ -37,13 +39,13 @@ The preparation order is **bump version → write/review both note files → com
 
 ```powershell
 # Defaults to patch versionName + 1 and versionCode + 1.
+.\release bump
+# Equivalent native Gradle task:
 .\gradlew.bat versionBump
-# Equivalent:
-ruby scripts/release.rb version:bump
 
 # Explicit larger version/code when needed:
+.\release bump --version-name 1.2.0 --version-code 30
 .\gradlew.bat versionBump -PversionName=1.2.0 -PversionCode=30
-ruby scripts/release.rb version:bump --version-name 1.2.0 --version-code 30
 ```
 
 The native `versionBump` task updates literal `versionName`/`versionCode` values in `app/build.gradle.kts`. Both must increase; code must remain at most 2100000000. It creates separate UTF-8 templates, preserving any existing files for the new version. From the inspected 1.1.8 / 20 source, a default bump creates:
@@ -55,7 +57,7 @@ The native `versionBump` task updates literal `versionName`/`versionCode` values
 
 Replace `RELEASE_NOTES_TODO` with reviewed text. Blank, comment-only or unfinished templates (`TODO`, `TBD`, `PLACEHOLDER`) are rejected. GitHub and Play text can differ. Add optional translations as `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`, for example `fr-FR/changelogs/21.txt`. Every supplied exact-code locale is validated, including the 500 Unicode-character limit; an emoji counts as one Unicode code point. Historical files and `default.txt` are never substitutes.
 
-Validate locally without publishing:
+Optionally validate locally without publishing using Ruby; CI always validates the committed notes before creating a tag or publishing:
 
 ```powershell
 ruby scripts/release.rb notes github
@@ -69,20 +71,20 @@ A new upload needs an unused versionCode. The upload lane rejects codes at or be
 
 ## All workflow choices and local dispatch commands
 
-Install/authenticate the GitHub CLI (`gh auth login`) before using dispatch wrappers. They invoke `gh workflow run android-play.yml --repo Graphene-Lab/graphene-photos-android-app --ref master` with the selected inputs. They use GitHub's pushed `master` commit, not local/unpushed files, and do not build, tag, commit or publish locally. Run `ruby scripts/release.rb --help` for the command list.
+Install/authenticate the GitHub CLI (`gh auth login`) before using dispatch wrappers. Windows release dispatch commands and `.\build ci` invoke `gh workflow run android-play.yml --repo Graphene-Lab/graphene-photos-android-app --ref master` with the selected inputs, without starting local Ruby or Gradle. They use GitHub's pushed `master` commit, not local/unpushed files, and do not build, tag, commit or publish locally. Run `.\release --help` and `.\build --help` for the command lists. The optional Ruby interface retains its original prefixes: `ruby scripts/release.rb release:promote 21` corresponds to `.\release promote 21`, `release:build` corresponds to `.\build ci`, `version:bump` corresponds to `.\release bump`, and `build:local:apk|aab|both` corresponds to `.\build apk|aab|both`.
 
 | Choice | Command | Actions inputs |
 | --- | --- | --- |
-| GitHub Release page only, no Android build | `ruby scripts/release.rb release:github` | `action=release`, `destination=github` |
-| Build/upload to internal only | `ruby scripts/release.rb release:play` | `action=release`, `destination=play`, `play_track=internal` |
-| GitHub page first, internal upload, signed APK attachment | `ruby scripts/release.rb release:both` | `action=release`, `destination=both`, `play_track=internal` |
-| Direct production only | `ruby scripts/release.rb release:play --play-track production` | `action=release`, `destination=play`, `play_track=production` |
-| GitHub page first, direct production, signed APK attachment | `ruby scripts/release.rb release:both --play-track production` | `action=release`, `destination=both`, `play_track=production` |
-| Promote latest internal without rebuilding | `ruby scripts/release.rb release:promote` | `action=promote`, blank `version_code` |
-| Promote exact internal code | `ruby scripts/release.rb release:promote 21` | `action=promote`, `version_code=21` |
-| Verify configuration and read access, no publishing | `ruby scripts/release.rb release:verify` | `action=verify` |
-| Check/build only, save signed AAB artifact | `ruby scripts/release.rb release:build` | `action=build` |
-| Upload an existing successful CI build to internal | `ruby scripts/release.rb release:internal 123456789` | `action=internal`, `build_run_id=123456789` |
+| GitHub Release page only, no Android build | `.\release github` | `action=release`, `destination=github` |
+| Build/upload to internal only | `.\release play` | `action=release`, `destination=play`, `play_track=internal` |
+| GitHub page first, internal upload, signed APK attachment | `.\release both` | `action=release`, `destination=both`, `play_track=internal` |
+| Direct production only | `.\release play --play-track production` | `action=release`, `destination=play`, `play_track=production` |
+| GitHub page first, direct production, signed APK attachment | `.\release both --play-track production` | `action=release`, `destination=both`, `play_track=production` |
+| Promote latest internal without rebuilding | `.\release promote` | `action=promote`, blank `version_code` |
+| Promote exact internal code | `.\release promote 21` | `action=promote`, `version_code=21` |
+| Verify configuration and read access, no publishing | `.\release verify` | `action=verify` |
+| Check/build only, save signed AAB artifact | `.\build ci` | `action=build` |
+| Upload an existing successful CI build to internal | `.\release internal 123456789` | `action=internal`, `build_run_id=123456789` |
 
 `play_track` applies only to release with `destination=play/both`. Saved-build reuse always targets internal. `build_run_id` applies only to internal reuse; `version_code` applies only to promotion. The numeric examples above are illustrative, not known valid Play codes/run IDs. All runs serialize in one Photos concurrency group.
 
@@ -125,7 +127,7 @@ Outputs for every successful CI build:
 
 Commit completed Play notes **before** starting a build intended for later publishing. Build-only may succeed without them, but that build cannot later be uploaded through artifact reuse if the original commit lacks completed notes. Editing today's notes cannot repair its original source.
 
-`release:internal <run-id>` accepts only a completed successful manual run of this workflow, from this repository's master branch and original head repository. It selects exactly one unexpired named artifact. It reads `app/build.gradle.kts` and every supplied exact-code locale from the original source commit through GitHub, validates them, downloads with GitHub artifact digest verification set to `error`, and checks the AAB digest/provenance manifest. It skips Java/Android setup, signing secrets and compilation. It uploads using the original build's package/version/notes. It creates no version tag or GitHub page.
+`.\release internal <run-id>` accepts only a completed successful manual run of this workflow, from this repository's master branch and original head repository. It selects exactly one unexpired named artifact. It reads `app/build.gradle.kts` and every supplied exact-code locale from the original source commit through GitHub, validates them, downloads with GitHub artifact digest verification set to `error`, and checks the AAB digest/provenance manifest. It skips Java/Android setup, signing secrets and compilation. It uploads using the original build's package/version/notes. It creates no version tag or GitHub page.
 
 ## Authentication setup (perform one step at a time)
 
@@ -204,7 +206,7 @@ The Java preflight verifies the keystore opens, the alias is a private key, its 
 
 ### 6. First authorized run
 
-After the implementation is reviewed, committed and pushed with your approval, explicitly run `release:verify` first. This does not publish. Once its read checks pass, prepare completed notes and a new unused versionCode, then explicitly run `release:both` for internal testing. Test updates/installations through Play before a separate production promotion. Do not start any of these runs until you authorize that step.
+After the implementation is reviewed, committed and pushed with your approval, explicitly run `.\release verify` first. This does not publish. Once its read checks pass, prepare completed notes and a new unused versionCode, then explicitly run `.\release both` for internal testing. Test updates/installations through Play before a separate production promotion. Do not start any of these runs until you authorize that step.
 
 ## Runtime, checks and internal helper commands
 
@@ -213,6 +215,8 @@ GitHub-hosted Ubuntu 24.04 jobs start on fresh VMs. `ruby/setup-ruby` supplies R
 Focused checks (publishing and CLI dispatch are mocked):
 
 ```powershell
+# Windows shortcut integration: disposable repository and mocked gh/Gradle, no Ruby needed.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/release/check_windows_launcher.ps1
 # Requires Ruby with minitest and rexml (both included in the locked bundle).
 ruby tests/release/run.rb
 ruby tests/release/check_gradle_tasks.rb
@@ -223,6 +227,8 @@ bundle exec fastlane lanes
 # If actionlint is installed:
 actionlint .github/workflows/android-play.yml
 ```
+
+The Windows launcher check runs both launchers' real `.cmd`/PowerShell code in a disposable path containing spaces. Its `PATH` contains only mock GitHub CLI/Gradle shims and Windows tools, so it cannot publish or build Android. It covers separate release/build commands, all dispatch choices, internal defaults, explicit production, latest/exact promotion, local tasks, invalid arguments, missing `gh`, and exit-code propagation. This Windows-only check is run locally; the existing Ubuntu workflow continues to run its Ruby/Fastlane and native Gradle checks.
 
 The isolated Gradle check exercises the actual task script against a temporary miniature project, including template creation/preservation and invalid bumps; it never changes Photos' real version. Ruby/Fastlane tests fail closed on unrecognized network/actions, cover destination-specific notes and Unicode limits, current versus original build notes, immutable tags, release-description retries, AAB provenance, production selection/promotion, Play APK polling and actual-file verification rejection paths.
 
