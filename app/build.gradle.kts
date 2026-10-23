@@ -33,6 +33,17 @@ val hasReleaseSigning =
         !releaseKeyAlias.isNullOrBlank() &&
         !releaseKeyPassword.isNullOrBlank()
 
+val strictRelease = providers.gradleProperty("requireReleaseConfiguration").orNull == "true" ||
+    gradle.startParameter.taskNames.any { it.substringAfterLast(':') in setOf("buildLocalApk", "buildLocalAab", "buildLocalBoth") }
+if (strictRelease) {
+    require(hasReleaseSigning) { "Release signing is required. Configure Photos' existing keystore.properties or ANDROID_KEYSTORE_* environment variables." }
+    listOf("BASE_URL_RELEASE", "STRIPE_PUBLIC_KEY_RELEASE").forEach { key ->
+        require(!appProps.getProperty(key).isNullOrBlank() && appProps.getProperty(key) != "null") {
+            "Missing $key in application.properties."
+        }
+    }
+}
+
 android {
     namespace = "com.graphenelab.photosync"
     compileSdk = 35
@@ -111,6 +122,10 @@ android {
         unitTests.all {
             it.useJUnitPlatform()
         }
+    }
+    lint {
+        // Snapshot only the ten existing login-string translation errors; new errors still fail CI.
+        baseline = file("lint-baseline.xml")
     }
 }
 

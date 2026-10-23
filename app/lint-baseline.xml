@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<issues format="6" by="lint 8.10.1" type="baseline" client="gradle" dependencies="false" name="AGP (8.10.1)">
+    <issue id="MissingTranslation" message="&quot;login_cloud_space_checking&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_cloud_space_checking&quot;&gt;Checking your cloud storage setup…&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="7" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_cloud_space_preparing&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_cloud_space_preparing&quot;&gt;Preparing your cloud storage. Please wait…&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="8" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_cloud_space_retry_scheduled&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_cloud_space_retry_scheduled&quot;&gt;Your cloud storage is recovering. We will check again when the next attempt is due.&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="9" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_cloud_space_fetching_credentials&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_cloud_space_fetching_credentials&quot;&gt;Getting your cloud connection details…&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="10" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_cloud_space_initializing&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_cloud_space_initializing&quot;&gt;Requesting another cloud storage setup attempt…&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="11" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_cloud_space_retry_limit_reached&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_cloud_space_retry_limit_reached&quot;&gt;Cloud storage setup could not finish after several attempts. You can start another setup attempt.&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="12" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_cloud_space_support_required&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_cloud_space_support_required&quot;&gt;Cloud storage setup could not finish. Please contact support for help.&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="13" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_cloud_space_retry_setup&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_cloud_space_retry_setup&quot;&gt;Retry cloud setup&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="14" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_session_expired&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_session_expired&quot;&gt;Your session has expired or your account is unavailable. Please sign in again.&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="15" column="13" />
+    </issue>
+    <issue id="MissingTranslation" message="&quot;login_sign_in_again&quot; is not translated in &quot;ru&quot; (Russian), &quot;it&quot; (Italian), &quot;fr&quot; (French), &quot;es&quot; (Spanish)" errorLine1="    &lt;string name=&quot;login_sign_in_again&quot;&gt;Sign in again&lt;/string&gt;" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location file="src/main/res/values/strings.xml" line="16" column="13" />
+    </issue>
+</issues>

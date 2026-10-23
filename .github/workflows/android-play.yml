@@ -1,0 +1,191 @@
+name: Android Google Play
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Verify setup, save a build, release, upload a saved build, or promote
+        type: choice
+        default: build
+        options: [verify, build, release, internal, promote]
+      destination:
+        description: Release destination (Both publishes the GitHub page first)
+        type: choice
+        default: both
+        options: [github, play, both]
+      play_track:
+        description: New Play upload track (production explicitly skips testing tracks)
+        type: choice
+        default: internal
+        options: [internal, production]
+      build_run_id:
+        description: Successful original CI run ID for action=internal; no rebuild
+        type: string
+      version_code:
+        description: Internal versionCode for promotion (blank selects highest internal code)
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-play-photos
+  cancel-in-progress: false
+
+env:
+  CI: 'true'
+  FASTLANE_OPT_OUT_USAGE: '1'
+  FASTLANE_SKIP_UPDATE_CHECK: '1'
+  FASTLANE_SKIP_DOCS: '1'
+
+jobs:
+  checks:
+    if: github.repository_id == '996638361' && github.ref == 'refs/heads/master' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests/release -p 'test_*.py' -v
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - run: bundle exec ruby tests/release/fastlane_test.rb
+      - run: bundle exec ruby tests/release/play_apk_test.rb
+      - uses: actions/setup-java@v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6.4.0
+      - run: python tests/release/check_upload_key.py
+      - run: python tests/release/check_gradle_tasks.py
+
+  release:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+    env:
+      RELEASE_ACTION: ${{ inputs.action }}
+      RELEASE_DESTINATION: ${{ inputs.destination }}
+      PLAY_TRACK: ${{ inputs.play_track }}
+      PLAY_BUILD_RUN_ID: ${{ inputs.build_run_id }}
+      PLAY_VERSION_CODE: ${{ inputs.version_code }}
+      GITHUB_TOKEN: ${{ github.token }}
+      PLAY_APP_SIGNING_SHA256: ${{ vars.PLAY_APP_SIGNING_SHA256 }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Select release steps
+        id: plan
+        run: python scripts/release.py plan
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Validate Photos identity and APK signing pin
+        if: steps.plan.outputs.authenticate_play == 'true'
+        env:
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+        run: |
+          python scripts/verify-google-identity.py --configured
+      - name: Validate required notes, record immutable tag and publish GitHub page first
+        if: steps.plan.outputs.prepare_release == 'true'
+        run: python scripts/release.py prepare-release
+      - name: Resolve version for Play APK attachment
+        if: steps.plan.outputs.attach_apk == 'true'
+        run: python scripts/release.py resolve-apk
+      - uses: actions/setup-java@v6.1.0
+        if: steps.plan.outputs.prepare_signing == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify registered Photos upload key and restore app configuration
+        if: steps.plan.outputs.prepare_signing == 'true'
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_UPLOAD_CERT_SHA256: ${{ vars.ANDROID_UPLOAD_CERT_SHA256 }}
+          APPLICATION_PROPERTIES: ${{ secrets.APPLICATION_PROPERTIES }}
+        run: python scripts/release.py prepare-ci
+      - uses: android-actions/setup-android@v4.0.4
+        if: steps.plan.outputs.build_android == 'true'
+      - name: Install Photos Android SDK
+        if: steps.plan.outputs.build_android == 'true'
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v6.4.0
+        if: steps.plan.outputs.build_android == 'true'
+      - name: Check app and build signed AAB once
+        if: steps.plan.outputs.build_android == 'true'
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          bundle exec fastlane android build_release
+          python scripts/release.py record-build
+      - name: Save signed AAB and provenance
+        if: steps.plan.outputs.build_android == 'true'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: graphene-photos-${{ github.sha }}
+          path: |
+            app/build/outputs/bundle/release/app-release.aab
+            app/build/outputs/bundle/release/release-build.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Validate successful original build and committed Play notes
+        if: steps.plan.outputs.download_aab == 'true'
+        run: python scripts/release.py resolve-build
+      - name: Download saved signed AAB
+        if: steps.plan.outputs.download_aab == 'true'
+        uses: actions/download-artifact@v8.0.2
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.build_run_id }}
+          artifact-ids: ${{ env.PLAY_AAB_ARTIFACT_ID }}
+          path: app/build/outputs/bundle/release
+          digest-mismatch: error
+      - name: Verify AAB content and original source provenance
+        if: steps.plan.outputs.download_aab == 'true'
+        run: python scripts/release.py verify-build
+      # Authenticate after compilation; keep short-lived credentials fresh for publishing.
+      - name: Authenticate using Photos service account and GitHub OIDC
+        if: steps.plan.outputs.authenticate_play == 'true'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: graphene-play-publishing
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - name: Verify Play read access without publishing
+        if: inputs.action == 'verify'
+        run: bundle exec fastlane android verify_access
+      - name: Upload existing AAB and exact-version Play notes
+        if: steps.plan.outputs.publish_bundle == 'true'
+        env:
+          PLAY_TARGET_TRACK: ${{ steps.plan.outputs.play_track }}
+        run: bundle exec fastlane android publish track:"$PLAY_TARGET_TRACK"
+      - name: Download Play-signed universal APK
+        if: steps.plan.outputs.attach_apk == 'true'
+        timeout-minutes: 15
+        run: bundle exec ruby scripts/download-play-apk.rb
+      - name: Verify actual Photos APK signature, package and versions before attachment
+        if: steps.plan.outputs.attach_apk == 'true'
+        run: python scripts/release.py attach-apk
+      - name: Promote selected internal version preserving Play release notes
+        if: inputs.action == 'promote'
+        run: bundle exec fastlane android promote version_code:"$PLAY_VERSION_CODE"
+      - name: Remove restored credentials
+        if: always() && steps.plan.outputs.prepare_signing == 'true'
+        run: rm -f -- "$RUNNER_TEMP/photos-upload.keystore" application.properties

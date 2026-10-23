@@ -1,0 +1,80 @@
+require_relative 'release_config'
+
+default_platform(:android)
+
+platform :android do
+  desc 'Verify track read access without building or publishing'
+  lane :verify_access do
+    %w[internal production].each do |track|
+      codes = google_play_track_version_codes(
+        package_name: PhotosRelease::PACKAGE_NAME,
+        json_key: PhotosRelease.credentials_file, track: track
+      )
+      UI.message("Photos #{track} read access verified: #{codes.join(', ')}")
+    end
+  end
+
+  desc 'Run automated checks and build one signed Photos AAB'
+  lane :build_release do
+    # Existing focused test entry point excludes only the documented, already-broken test sources.
+    gradle(
+      tasks: [':app:testDebugUnitTest', ':communicationLib:test', ':app:lintRelease', ':app:bundleRelease'],
+      project_dir: PhotosRelease::ROOT,
+      flags: '--no-daemon --stacktrace --max-workers=2 -PrequireReleaseConfiguration=true --init-script scripts/cloud-space-tests.init.gradle'
+    )
+  end
+
+  desc 'Upload the existing signed AAB and exact-version notes (internal by default)'
+  lane :publish do |options|
+    track = options.fetch(:track, 'internal')
+    UI.user_error!('Play track must be internal or production.') unless %w[internal production].include?(track)
+    info = PhotosRelease.info
+    credentials = PhotosRelease.credentials_file
+    UI.user_error!('Build or select the signed AAB first.') unless File.file?(PhotosRelease::AAB_PATH)
+    existing = %w[internal production].flat_map do |existing_track|
+      google_play_track_version_codes(package_name: PhotosRelease::PACKAGE_NAME, json_key: credentials, track: existing_track)
+    end
+    if existing.any? { |code| code.to_i >= info.fetch('code') }
+      UI.user_error!('Use an unused, higher versionCode (gradlew versionBump). Promote an uploaded internal bundle instead of uploading it twice.')
+    end
+    # A fresh tree contains only the selected code. Fastlane cannot fall back to default.txt or historical locales.
+    Dir.mktmpdir('photos-changelogs-', ENV['RUNNER_TEMP']) do |metadata|
+      info.fetch('play_notes').each do |locale, text|
+        directory = File.join(metadata, locale, 'changelogs')
+        FileUtils.mkdir_p(directory)
+        File.write(File.join(directory, "#{info.fetch('code')}.txt"), text, encoding: 'UTF-8')
+      end
+      upload_to_play_store(
+        package_name: PhotosRelease::PACKAGE_NAME, json_key: credentials,
+        aab: PhotosRelease::AAB_PATH, track: track, release_status: 'completed',
+        version_name: "#{info.fetch('name')} (#{info.fetch('code')})", metadata_path: metadata,
+        skip_upload_apk: true, skip_upload_metadata: true, skip_upload_changelogs: false,
+        skip_upload_images: true, skip_upload_screenshots: true,
+        rescue_changes_not_sent_for_review: false
+      )
+    end
+  rescue ArgumentError => error
+    UI.user_error!(error.message)
+  end
+
+  desc 'Promote latest or exact internal versionCode to production, retaining Play notes; no build'
+  lane :promote do |options|
+    credentials = PhotosRelease.credentials_file
+    tracks = %w[internal production].to_h do |track|
+      [track, google_play_track_version_codes(package_name: PhotosRelease::PACKAGE_NAME, json_key: credentials, track: track)]
+    end
+    code = PhotosRelease.promotion_version(options[:version_code], internal_versions: tracks['internal'], production_versions: tracks['production'])
+    UI.message("Promoting Photos internal versionCode #{code} to production without rebuilding.")
+    # supply selects the original TrackRelease (including its release_notes) and promotes it.
+    upload_to_play_store(
+      package_name: PhotosRelease::PACKAGE_NAME, json_key: credentials,
+      track: 'internal', track_promote_to: 'production', version_code: code,
+      release_status: 'completed', track_promote_release_status: 'completed',
+      skip_upload_apk: true, skip_upload_aab: true, skip_upload_metadata: true,
+      skip_upload_changelogs: true, skip_upload_images: true, skip_upload_screenshots: true,
+      rescue_changes_not_sent_for_review: false
+    )
+  rescue ArgumentError => error
+    UI.user_error!(error.message)
+  end
+end

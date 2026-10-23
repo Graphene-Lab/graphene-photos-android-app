@@ -17,3 +17,12 @@ keystore.properties
 *.keystore
 .gradle-user-home/
 /build-release-local.ps1
+
+# Short-lived CI credentials, local tooling and release intermediates
+gha-creds-*.json
+.release-work/
+__pycache__/
+fastlane/report.xml
+fastlane/README.md
+vendor/bundle/
+.bundle/
